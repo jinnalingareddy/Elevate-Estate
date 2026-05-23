@@ -1,0 +1,26 @@
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Next.js build output
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Build cache
+tsconfig.tsbuildinfo
+
+# Vercel
+.vercel
+
+# IDE / Claude Code session files
+.agents/
+skills-lock.json
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
