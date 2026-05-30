@@ -23,7 +23,7 @@ export default async function SupportPage() {
     .eq("id", user.id)
     .single();
 
-  const email = profile?.email ?? user.email ?? "";
+  const email = profile?.email ?? "";
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">

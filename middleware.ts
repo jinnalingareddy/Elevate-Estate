@@ -225,6 +225,7 @@ export async function middleware(request: NextRequest) {
   // Auth passed — inject the verified user ID as a request header so server
   // components can read it without a second round-trip to the Supabase auth server.
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete("x-user-id"); // strip any client-supplied value
   requestHeaders.set("x-user-id", user.id);
   const responseWithUserId = NextResponse.next({ request: { headers: requestHeaders } });
 
@@ -241,8 +242,7 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  withSecurityHeaders(responseWithUserId);
-  return responseWithUserId;
+  return withSecurityHeaders(responseWithUserId);
 }
 
 // ─── Matcher ──────────────────────────────────────────────────────────────────
