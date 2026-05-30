@@ -32,9 +32,10 @@ export default async function DashboardPage() {
   const sixtyDaysAgoStr = sixtyDaysAgo.toISOString();
 
   // Kick off listings first; chain listing_views off it while other queries run in parallel.
-  const listingsPromise = getAgentListings(agentId).then((r) => r.data).catch(
-    () => [] as Listing[]
-  );
+  // Pass limit: 1000 to ensure the view chart covers all agent listings, not just the 50 most recent.
+  const listingsPromise = getAgentListings(agentId, { limit: 1000 })
+    .then((r) => r.data)
+    .catch(() => [] as Listing[]);
 
   const [listings, activeLeads, subscription, limitInfo, viewRows] =
     await Promise.all([

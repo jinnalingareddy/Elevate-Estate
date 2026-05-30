@@ -25,7 +25,8 @@ export default async function ListingsPage({
   if (!user) redirect("/agent/auth");
 
   const agentId = user.id;
-  const page = Math.max(1, Number(searchParams?.page ?? 1));
+  const raw = Number(searchParams?.page);
+  const page = Math.max(1, Number.isFinite(raw) ? raw : 1);
 
   // Start limitInfo immediately (independent). Await listings only to get IDs for
   // lead counts — all three fetches overlap as much as possible.
@@ -71,7 +72,7 @@ export default async function ListingsPage({
                   ← Anterior
                 </Link>
               ) : (
-                <span className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 dark:border-slate-800 dark:text-slate-600 cursor-not-allowed">
+                <span aria-disabled="true" className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 dark:border-slate-800 dark:text-slate-600 cursor-not-allowed">
                   ← Anterior
                 </span>
               )}
@@ -88,7 +89,7 @@ export default async function ListingsPage({
                   Siguiente →
                 </Link>
               ) : (
-                <span className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 dark:border-slate-800 dark:text-slate-600 cursor-not-allowed">
+                <span aria-disabled="true" className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 dark:border-slate-800 dark:text-slate-600 cursor-not-allowed">
                   Siguiente →
                 </span>
               )}
