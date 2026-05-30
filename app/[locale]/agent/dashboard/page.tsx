@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAgentListings } from "@/lib/supabase/queries/listings";
+import type { Listing } from "@/lib/supabase/types";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
 import { getListingLimitInfo } from "@/lib/listing-limits";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
@@ -16,18 +17,12 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
+
+  const agentId = user.id;
   const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
 
-  if (!session) redirect("/agent/auth");
-
-  const agentId = session.user.id;
-
-  // Pre-compute date range before kicking off queries.
   const now = new Date();
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(now.getDate() - 30);
@@ -36,17 +31,15 @@ export default async function DashboardPage() {
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
   const sixtyDaysAgoStr = sixtyDaysAgo.toISOString();
 
-  // Start listings first so listing_views can chain off it while the other
-  // three queries run in parallel — avoids a sequential round-trip.
-  const listingsPromise = getAgentListings(agentId).catch(
-    () => [] as Awaited<ReturnType<typeof getAgentListings>>
+  // Kick off listings first; chain listing_views off it while other queries run in parallel.
+  const listingsPromise = getAgentListings(agentId).then((r) => r.data).catch(
+    () => [] as Listing[]
   );
 
   const [listings, activeLeads, subscription, limitInfo, viewRows] =
     await Promise.all([
       listingsPromise,
 
-      // Count-only query — the dashboard only needs the number, not full rows.
       supabase
         .from("leads")
         .select("*", { count: "exact", head: true })
@@ -67,6 +60,7 @@ export default async function DashboardPage() {
 
       // Chains off listingsPromise — fires as soon as listings resolves,
       // overlapping with leads/subscription/limitInfo round-trips.
+      // Capped at 2000 rows to prevent unbounded scans on active accounts.
       listingsPromise
         .then((ls) => {
           const ids = ls.map((l) => l.id);
@@ -76,6 +70,7 @@ export default async function DashboardPage() {
             .select("viewed_at")
             .in("listing_id", ids)
             .gte("viewed_at", sixtyDaysAgoStr)
+            .limit(2000)
             .then((r) => r.data);
         })
         .catch(() => null),
@@ -92,7 +87,7 @@ export default async function DashboardPage() {
 
     const grouped: Record<string, number> = {};
     for (const row of currentRows) {
-      const day = row.viewed_at.slice(0, 10);
+      const day = new Date(row.viewed_at).toISOString().slice(0, 10);
       grouped[day] = (grouped[day] ?? 0) + 1;
     }
 
@@ -103,7 +98,6 @@ export default async function DashboardPage() {
       viewsData.push({ date: key, views: grouped[key] ?? 0 });
     }
   } else {
-    // Still build 30 empty days so chart renders
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
@@ -120,7 +114,6 @@ export default async function DashboardPage() {
   const planLimit = config.plans[plan].listingLimit;
   const renewalDate = subscription?.current_period_end ?? null;
 
-  // Warning banner: past due or cancelled
   let warningBanner: string | null = null;
   if (subscription?.status === "past_due") {
     warningBanner =
