@@ -30,4 +30,21 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Toast animations (replaces Framer Motion) */
+  .animate-toast-in {
+    animation: toastSlideIn 150ms ease forwards;
+  }
+  .animate-toast-out {
+    animation: toastSlideOut 150ms ease forwards;
+  }
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateX(calc(100% + 1.5rem)); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes toastSlideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(calc(100% + 1.5rem)); opacity: 0; }
 }

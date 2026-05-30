@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { Eye, LayoutDashboard, PlusSquare, X } from "lucide-react";
 import { Link } from "@/lib/navigation";
 import { useClientAuth } from "@/components/providers/ClientAuthProvider";
@@ -49,21 +48,16 @@ export function AgentPreviewBar() {
   }, [visible]);
 
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          key="agent-preview-bar"
-          initial={{ y: -40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -40, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 32 }}
-          className={cn(
-            "fixed top-0 inset-x-0 z-[60]",        // above Navbar (z-50)
-            "bg-slate-900 border-b border-slate-700",
-            "flex items-center justify-between",
-            "px-4 h-9 gap-3"
-          )}
-        >
+    <div
+      className={cn(
+        "fixed top-0 inset-x-0 z-[60]",        // above Navbar (z-50)
+        "bg-slate-900 border-b border-slate-700",
+        "flex items-center justify-between",
+        "px-4 h-9 gap-3",
+        "transition-all duration-200",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
+      )}
+    >
           {/* Left: context label */}
           <div className="flex items-center gap-2 min-w-0">
             <Eye className="h-3.5 w-3.5 text-gold-400 shrink-0" aria-hidden />
@@ -110,8 +104,6 @@ export function AgentPreviewBar() {
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </div>
   );
 }

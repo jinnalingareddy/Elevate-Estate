@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { usePathname as useNextPathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   Heart,
@@ -141,18 +140,14 @@ function AgentDropdown({ profile, scrolled, onLogout }: AgentDropdownProps) {
       </button>
 
       {/* Dropdown panel */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.97 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className={cn(
-              "absolute right-0 mt-2 w-56 rounded-xl shadow-lg border z-50 overflow-hidden",
-              "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-            )}
-          >
+      <div
+        className={cn(
+          "absolute right-0 mt-2 w-56 rounded-xl shadow-lg border z-50 overflow-hidden",
+          "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700",
+          "transition-all duration-150 origin-top-right",
+          open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+        )}
+      >
             {/* Identity header */}
             <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
@@ -207,9 +202,7 @@ function AgentDropdown({ profile, scrolled, onLogout }: AgentDropdownProps) {
                 Cerrar sesión
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -452,36 +445,25 @@ export function Navbar() {
       </header>
 
       {/* Mobile backdrop */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            key="mobile-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-            onClick={() => setMenuOpen(false)}
-          />
+      <div
+        className={cn(
+          "fixed inset-0 z-30 bg-black/40 lg:hidden transition-opacity duration-200",
+          menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-      </AnimatePresence>
+        onClick={() => setMenuOpen(false)}
+      />
 
       {/* Mobile slide-down drawer */}
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            key="mobile-menu"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className={cn(
-              "fixed inset-x-0 z-40 lg:hidden",
-              "bg-white dark:bg-slate-900",
-              "border-b border-slate-200 dark:border-slate-700 shadow-lg"
-            )}
-            style={{ top: "calc(var(--preview-bar-h, 0px) + 64px)" }}
-          >
+      <div
+        className={cn(
+          "fixed inset-x-0 z-40 lg:hidden",
+          "bg-white dark:bg-slate-900",
+          "border-b border-slate-200 dark:border-slate-700 shadow-lg",
+          "transition-all duration-200 origin-top",
+          menuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+        )}
+        style={{ top: "calc(var(--preview-bar-h, 0px) + 64px)" }}
+      >
             <div className="mx-auto max-w-7xl px-4 py-4 flex flex-col gap-1">
               {NAV_ITEMS.map(({ labelKey, href }) => (
                 <Link
@@ -574,9 +556,7 @@ export function Navbar() {
                 </Link>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </div>
     </>
   );
 }

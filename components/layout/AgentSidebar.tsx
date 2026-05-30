@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import {
@@ -254,41 +253,32 @@ export function AgentSidebar() {
       </div>
 
       {/* ── Mobile slide-in ───────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              key="mobile-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="lg:hidden fixed inset-0 z-40 bg-black/60"
-              onClick={() => setMobileOpen(false)}
-            />
-
-            {/* Panel */}
-            <motion.aside
-              key="mobile-sidebar"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 350, damping: 35 }}
-              className="lg:hidden fixed inset-y-0 left-0 z-50 w-72"
-            >
-              <button
-                className="absolute top-4 right-4 p-1.5 rounded-md text-slate-400 hover:text-white"
-                onClick={() => setMobileOpen(false)}
-                aria-label="Cerrar menú"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <SidebarContent {...sharedProps} />
-            </motion.aside>
-          </>
+      {/* Backdrop */}
+      <div
+        className={cn(
+          "lg:hidden fixed inset-0 z-40 bg-black/60 transition-opacity duration-200",
+          mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-      </AnimatePresence>
+        onClick={() => setMobileOpen(false)}
+      />
+
+      {/* Panel */}
+      <aside
+        className={cn(
+          "lg:hidden fixed inset-y-0 left-0 z-50 w-72",
+          "transition-transform duration-200 ease-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <button
+          className="absolute top-4 right-4 p-1.5 rounded-md text-slate-400 hover:text-white"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Cerrar menú"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        <SidebarContent {...sharedProps} />
+      </aside>
     </>
   );
 }

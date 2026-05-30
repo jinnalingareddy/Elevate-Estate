@@ -4,7 +4,6 @@ import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   Building2,
   Edit2,
@@ -84,64 +83,60 @@ function RowMenu({ listing, onEdit, onToggle, onDelete }: RowMenuProps) {
         <MoreHorizontal className="h-4 w-4" aria-hidden />
       </button>
 
-      <AnimatePresence>
+      <>
         {open && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -4 }}
-              transition={{ duration: 0.12 }}
-              style={{ top: menuPos.top, right: menuPos.right }}
-              className={cn(
-                "fixed z-20 w-44",
-                "bg-white dark:bg-slate-800 rounded-lg shadow-lg",
-                "border border-slate-200 dark:border-slate-700",
-                "py-1 overflow-hidden"
-              )}
-            >
-              <button
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                onClick={() => { setOpen(false); onEdit(); }}
-              >
-                <Edit2 className="h-4 w-4 text-slate-400" aria-hidden />
-                Editar
-              </button>
-              <a
-                href={`/propiedades/${listing.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                onClick={() => setOpen(false)}
-              >
-                <Eye className="h-4 w-4 text-slate-400" aria-hidden />
-                Ver publicación
-              </a>
-              {next && (
-                <button
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                  onClick={() => { setOpen(false); onToggle(); }}
-                >
-                  <Building2 className="h-4 w-4 text-slate-400" aria-hidden />
-                  {next === "active" ? "Activar" : "Pausar"}
-                </button>
-              )}
-              <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
-              <button
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                onClick={() => { setOpen(false); onDelete(); }}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-                Eliminar
-              </button>
-            </motion.div>
-          </>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setOpen(false)}
+          />
         )}
-      </AnimatePresence>
+        <div
+          style={{ top: menuPos.top, right: menuPos.right }}
+          className={cn(
+            "fixed z-20 w-44",
+            "bg-white dark:bg-slate-800 rounded-lg shadow-lg",
+            "border border-slate-200 dark:border-slate-700",
+            "py-1 overflow-hidden",
+            "transition-all duration-150 origin-top-right",
+            open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          )}
+        >
+          <button
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            onClick={() => { setOpen(false); onEdit(); }}
+          >
+            <Edit2 className="h-4 w-4 text-slate-400" aria-hidden />
+            Editar
+          </button>
+          <a
+            href={`/propiedades/${listing.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            onClick={() => setOpen(false)}
+          >
+            <Eye className="h-4 w-4 text-slate-400" aria-hidden />
+            Ver publicación
+          </a>
+          {next && (
+            <button
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+              onClick={() => { setOpen(false); onToggle(); }}
+            >
+              <Building2 className="h-4 w-4 text-slate-400" aria-hidden />
+              {next === "active" ? "Activar" : "Pausar"}
+            </button>
+          )}
+          <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+          <button
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={() => { setOpen(false); onDelete(); }}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Eliminar
+          </button>
+        </div>
+      </>
     </div>
   );
 }
