@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import * as RadixTabs from "@radix-ui/react-tabs";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge } from "./Badge";
 
@@ -85,20 +84,16 @@ function Tabs({
                 ]
               )}
             >
-              {/* Animated indicator */}
+              {/* Active indicator */}
               {isActive && variant === "underline" && (
-                <motion.span
-                  layoutId="tabs-underline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-500 dark:bg-gold-400"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-500 dark:bg-gold-400 transition-all duration-200"
                 />
               )}
 
               {isActive && variant === "pill" && (
-                <motion.span
-                  layoutId="tabs-pill"
-                  className="absolute inset-0 rounded-md bg-gold-500 dark:bg-gold-600"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                <span
+                  className="absolute inset-0 rounded-md bg-gold-500 dark:bg-gold-600 transition-all duration-200"
                 />
               )}
 

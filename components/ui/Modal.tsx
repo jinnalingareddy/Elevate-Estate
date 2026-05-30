@@ -1,7 +1,6 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,46 +29,37 @@ function Modal({
 }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <AnimatePresence>
-        {open && (
-          <Dialog.Portal forceMount>
+      <Dialog.Portal>
             {/* Overlay */}
-            <Dialog.Overlay asChild>
-              <motion.div
-                className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              />
-            </Dialog.Overlay>
+            <Dialog.Overlay
+              className={cn(
+                "fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm",
+                "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+                "duration-200"
+              )}
+            />
 
             {/* Content */}
-            <Dialog.Content asChild>
-              <motion.div
-                className={cn(
-                  "fixed left-1/2 top-1/2 z-[9999] w-[calc(100vw-2rem)]",
-                  maxWidth,
-                  "rounded-xl bg-white p-6 shadow-2xl",
-                  "dark:bg-slate-900 dark:shadow-slate-900/50",
-                  "focus:outline-none",
-                  className
-                )}
-                style={{
-                  x: "-50%",
-                  y: "-50%",
-                  paddingTop: "max(1.5rem, env(safe-area-inset-top))",
-                  paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
-                }}
-                initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-48%" }}
-                animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-                exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-48%" }}
-                transition={{
-                  type: "spring",
-                  stiffness: 350,
-                  damping: 30,
-                }}
-              >
+            <Dialog.Content
+              className={cn(
+                "fixed left-1/2 top-1/2 z-[9999] w-[calc(100vw-2rem)]",
+                "-translate-x-1/2 -translate-y-1/2",
+                maxWidth,
+                "rounded-xl bg-white p-6 shadow-2xl",
+                "dark:bg-slate-900 dark:shadow-slate-900/50",
+                "focus:outline-none",
+                "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+                "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+                "duration-200",
+                className
+              )}
+              style={{
+                paddingTop: "max(1.5rem, env(safe-area-inset-top))",
+                paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+              }}
+            >
                 {/* Header */}
                 {(title || !hideClose) && (
                   <div className="flex items-start justify-between gap-4 mb-4">
@@ -105,11 +95,8 @@ function Modal({
 
                 {/* Body */}
                 <div>{children}</div>
-              </motion.div>
             </Dialog.Content>
-          </Dialog.Portal>
-        )}
-      </AnimatePresence>
+      </Dialog.Portal>
     </Dialog.Root>
   );
 }
