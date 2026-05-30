@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { SearchShell } from "@/components/search/SearchShell";
 import { getListings, getMapPins } from "@/lib/supabase/queries/listings";
-import type { ListingFilters, ListingType, PropertyType, Listing, ListingCard, MapPin } from "@/lib/supabase/types";
+import type { ListingFilters, ListingType, PropertyType, ListingCard, MapPin } from "@/lib/supabase/types";
 
 export const revalidate = 60;
 

@@ -97,14 +97,8 @@ export type ListingCard = Pick<
   | "images"
   | "created_at"
 > & {
-  area_sqm?: number | null;
-  agent_id?: string;
-  description?: string;
-  virtual_tour_url?: string | null;
-  profiles?: Pick<Profile, "id" | "full_name" | "avatar_url"> & {
-    phone?: string | null;
-    whatsapp?: string | null;
-  };
+  agent_id: string;
+  profiles?: Pick<Profile, "id" | "full_name" | "avatar_url"> | null;
 };
 
 export type MapPin = {

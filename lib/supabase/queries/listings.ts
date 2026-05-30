@@ -51,7 +51,7 @@ export async function getListings(filters: ListingFilters = {}): Promise<{
   let query = supabase
     .from("listings")
     .select(
-      "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, profiles(id, full_name, avatar_url)",
+      "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, agent_id, profiles(id, full_name, avatar_url)",
       { count: "estimated" }
     )
     .eq("status", "active")
@@ -191,7 +191,7 @@ export const getFeaturedListings = cache(
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, profiles(id, full_name, avatar_url)"
+          "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, agent_id, profiles(id, full_name, avatar_url)"
         )
         .eq("status", "active")
         .eq("featured", true)
@@ -214,7 +214,7 @@ export const getSimilarListings = cache(
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, profiles(id, full_name, avatar_url)"
+          "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, agent_id, profiles(id, full_name, avatar_url)"
         )
         .eq("status", "active")
         .neq("id", listingId)

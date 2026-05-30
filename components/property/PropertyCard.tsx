@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/Button";
 import { QuickContactModal } from "@/components/search/QuickContactModal";
 import { useFavorites } from "@/components/providers/FavoritesProvider";
 import { cn, formatPrice, formatArea } from "@/lib/utils";
-import type { Listing, ListingCard, PropertyType, ListingType } from "@/lib/supabase/types";
+import type { Listing, ListingCard, Profile, PropertyType, ListingType } from "@/lib/supabase/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ function PhotoBadges({ listing }: { listing: Listing | ListingCard }) {
           {t("recentlyListed")}
         </Badge>
       )}
-      {listing.virtual_tour_url && (
+      {"virtual_tour_url" in listing && listing.virtual_tour_url && (
         <Badge variant="success">
           <Video className="h-3 w-3" aria-hidden />
           {t("tour3d")}
@@ -175,8 +175,8 @@ export function PropertyCard({
   // Guard: images may arrive as a JSONB string instead of array on bad seed data
   const imageList = Array.isArray(listing.images) ? listing.images : [];
   const coverImage = imageList[0] ?? null;
-  const agentWhatsApp =
-    listing.profiles?.whatsapp ?? listing.profiles?.phone ?? null;
+  const agentProfile = listing.profiles as Profile | null | undefined;
+  const agentWhatsApp = agentProfile?.whatsapp ?? agentProfile?.phone ?? null;
 
   // ── MINI variant ──────────────────────────────────────────────────────────
   if (variant === "mini") {
@@ -395,7 +395,7 @@ export function PropertyCard({
             <StatsRow listing={listing} />
           </div>
 
-          {listing.description && (
+          {"description" in listing && listing.description && (
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 line-clamp-2 flex-1">
               {listing.description}
             </p>
