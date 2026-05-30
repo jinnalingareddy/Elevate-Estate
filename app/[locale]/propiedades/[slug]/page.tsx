@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
+import ReactDOM from "react-dom";
 import { Suspense } from "react";
 import {
   Bath,
@@ -138,6 +139,12 @@ export default async function PropertyPage({
 }) {
   const listing = await getListingBySlug(params.slug).catch(() => null);
   if (!listing) notFound();
+
+  // Preload hero image — React injects <link rel="preload"> into <head> during streaming
+  const heroImageUrl = listing.images[0]?.large_url;
+  if (heroImageUrl) {
+    ReactDOM.preload(heroImageUrl, { as: "image", fetchPriority: "high" });
+  }
 
   // Fire-and-forget view tracking (don't block page render).
   // getSimilarListings runs in parallel.

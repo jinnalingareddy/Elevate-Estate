@@ -160,7 +160,6 @@ function FullscreenModal({
               alt=""
               fill
               sizes="100vw"
-              priority
             />
           </div>
         ))}
