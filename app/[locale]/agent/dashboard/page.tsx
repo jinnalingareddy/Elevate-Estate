@@ -26,26 +26,24 @@ export default async function DashboardPage() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(now.getDate() - 30);
-  const sixtyDaysAgo = new Date(now);
-  sixtyDaysAgo.setDate(now.getDate() - 60);
-  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
-  const sixtyDaysAgoStr = sixtyDaysAgo.toISOString();
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
 
-  // Kick off listings first; chain listing_views off it while other queries run in parallel.
-  // Pass limit: 1000 to ensure the view chart covers all agent listings, not just the 50 most recent.
+  // Pass limit: 1000 so activeListings count and DashboardShell listing list are accurate.
   const listingsPromise = getAgentListings(agentId, { limit: 1000 })
     .then((r) => r.data)
     .catch(() => [] as Listing[]);
 
-  const [listings, activeLeads, subscription, limitInfo, viewRows] =
+  const [listings, activeLeads, subscription, limitInfo, viewStats] =
     await Promise.all([
       listingsPromise,
 
-      supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("agent_id", agentId)
-        .eq("status", "new")
+      Promise.resolve(
+        supabase
+          .from("leads")
+          .select("*", { count: "exact", head: true })
+          .eq("agent_id", agentId)
+          .eq("status", "new")
+      )
         .then((r) => r.count ?? 0)
         .catch(() => 0),
 
@@ -59,51 +57,38 @@ export default async function DashboardPage() {
         available: 1,
       })),
 
-      // Chains off listingsPromise — fires as soon as listings resolves,
-      // overlapping with leads/subscription/limitInfo round-trips.
-      // Capped at 2000 rows to prevent unbounded scans on active accounts.
-      listingsPromise
-        .then((ls) => {
-          const ids = ls.map((l) => l.id);
-          if (ids.length === 0) return null;
-          return supabase
-            .from("listing_views")
-            .select("viewed_at")
-            .in("listing_id", ids)
-            .gte("viewed_at", sixtyDaysAgoStr)
-            .limit(2000)
-            .then((r) => r.data);
-        })
+      // Aggregation done in Postgres — no client-side grouping needed.
+      Promise.resolve(
+        supabase.rpc("get_agent_view_stats", { p_agent_id: agentId, p_days: 60 })
+      )
+        .then((r) => r.data as { stat_date: string; view_count: number }[] | null)
         .catch(() => null),
     ]);
 
-  let viewsData: ViewDataPoint[] = [];
+  // Build a date-keyed map from RPC rows (covers 60 days).
+  const viewMap: Record<string, number> = {};
+  for (const row of viewStats ?? []) {
+    viewMap[row.stat_date] = Number(row.view_count);
+  }
+
+  // Split 60-day window: last 30 days = current, prior 30 days = previous.
   let totalViews = 0;
   let viewsPrev = 0;
-
-  if (viewRows) {
-    const currentRows = viewRows.filter((r) => r.viewed_at >= thirtyDaysAgoStr);
-    viewsPrev = viewRows.length - currentRows.length;
-    totalViews = currentRows.length;
-
-    const grouped: Record<string, number> = {};
-    for (const row of currentRows) {
-      const day = new Date(row.viewed_at).toISOString().slice(0, 10);
-      grouped[day] = (grouped[day] ?? 0) + 1;
+  for (const [date, count] of Object.entries(viewMap)) {
+    if (date >= thirtyDaysAgoStr) {
+      totalViews += count;
+    } else {
+      viewsPrev += count;
     }
+  }
 
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      viewsData.push({ date: key, views: grouped[key] ?? 0 });
-    }
-  } else {
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      viewsData.push({ date: d.toISOString().slice(0, 10), views: 0 });
-    }
+  // Chart: one point per day for the last 30 days.
+  const viewsData: ViewDataPoint[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    viewsData.push({ date: key, views: viewMap[key] ?? 0 });
   }
 
   const viewsChange =
