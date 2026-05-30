@@ -222,8 +222,27 @@ export async function middleware(request: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(homeUrl));
   }
 
-  // Auth passed — return the i18n response (already carries refreshed cookies)
-  return response;
+  // Auth passed — inject the verified user ID as a request header so server
+  // components can read it without a second round-trip to the Supabase auth server.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-user-id", user.id);
+  const responseWithUserId = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Copy all cookies (session refresh + role cookie) from the i18n response onto
+  // the new response so nothing is lost.
+  response.cookies.getAll().forEach(({ name, value, ...rest }) => {
+    responseWithUserId.cookies.set(name, value, rest as Parameters<typeof responseWithUserId.cookies.set>[2]);
+  });
+
+  // Copy security headers from the i18n response.
+  response.headers.forEach((value, key) => {
+    if (key.startsWith("x-") || key === "content-security-policy" || key === "referrer-policy" || key === "permissions-policy") {
+      responseWithUserId.headers.set(key, value);
+    }
+  });
+
+  withSecurityHeaders(responseWithUserId);
+  return responseWithUserId;
 }
 
 // ─── Matcher ──────────────────────────────────────────────────────────────────
