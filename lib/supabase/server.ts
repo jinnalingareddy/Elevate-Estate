@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import type { User } from "@supabase/supabase-js";
 
 // Memoized per-request — all callers within the same render share one instance.
 export const getSupabaseServerClient = cache(() => {
@@ -27,6 +28,17 @@ export const getSupabaseServerClient = cache(() => {
       },
     }
   );
+});
+
+// Cached per-request — calls getUser() at most once per render pass regardless
+// of how many server components ask for the user. Eliminates the getSession()
+// warning and avoids redundant network round-trips to the Supabase Auth server.
+export const getAuthUser = cache(async (): Promise<User | null> => {
+  const supabase = getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
 });
 
 // Stateless anon client — no cookies. Use inside unstable_cache callbacks and

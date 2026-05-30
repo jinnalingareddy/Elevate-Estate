@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, CreditCard, Package } from "lucide-react";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import {
   getAgentSubscription,
   getAgentListingSlots,
@@ -45,16 +45,10 @@ const MOCK_BILLING = [
 ];
 
 export default async function SubscriptionsPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  if (!session) redirect("/agent/auth");
-
-  const agentId = session.user.id;
+  const agentId = user.id;
 
   const [subscription, slots, limitInfo] = await Promise.all([
     getAgentSubscription(agentId).catch(() => null),

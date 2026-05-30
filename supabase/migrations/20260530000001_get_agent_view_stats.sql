@@ -7,4 +7,4 @@ RETURNS TABLE(stat_date date, view_count bigint) AS $$
     AND lv.viewed_at >= NOW() - (p_days || ' days')::interval
   GROUP BY DATE(lv.viewed_at)
   ORDER BY stat_date;
-$$ LANGUAGE sql STABLE;
+$$ LANGUAGE sql STABLE SECURITY INVOKER;

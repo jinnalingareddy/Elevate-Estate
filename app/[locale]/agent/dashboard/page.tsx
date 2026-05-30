@@ -68,7 +68,7 @@ export default async function DashboardPage() {
   // Build a date-keyed map from RPC rows (covers 60 days).
   const viewMap: Record<string, number> = {};
   for (const row of viewStats ?? []) {
-    viewMap[row.stat_date] = Number(row.view_count);
+    viewMap[row.stat_date] = row.view_count;
   }
 
   // Split 60-day window: last 30 days = current, prior 30 days = previous.

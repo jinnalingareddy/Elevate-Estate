@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { ListingForm } from "@/components/agent/ListingForm";
@@ -18,27 +18,22 @@ export default async function EditListingPage({
 }: {
   params: { id: string };
 }) {
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
+
   const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
 
-  if (!session) redirect("/agent/auth");
+  // Fetch listing and subscription in parallel.
+  const [listingRes, subscription] = await Promise.all([
+    supabase.from("listings").select("*").eq("id", params.id).single(),
+    getAgentSubscription(user.id).catch(() => null),
+  ]);
 
-  const { data: listing, error } = await supabase
-    .from("listings")
-    .select("*")
-    .eq("id", params.id)
-    .single();
+  if (listingRes.error || !listingRes.data) notFound();
+  const listing = listingRes.data;
 
-  if (error || !listing) notFound();
+  if (listing.agent_id !== user.id) notFound();
 
-  // Ownership check
-  if (listing.agent_id !== session.user.id) notFound();
-
-  const subscription = await getAgentSubscription(session.user.id).catch(() => null);
   const agentPlan = (subscription?.plan ?? "free") as "free" | "pro" | "elite";
 
   return (
@@ -46,7 +41,6 @@ export default async function EditListingPage({
       <AgentSidebar />
       <main className="flex-1 lg:pl-64">
         <div className="px-4 sm:px-8 pb-8 pt-14 lg:pt-8 max-w-3xl">
-          {/* Back link */}
           <Link
             href="/agent/listings"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-6"
@@ -65,7 +59,7 @@ export default async function EditListingPage({
           <ListingForm
             mode="edit"
             initialData={listing}
-            agentId={session.user.id}
+            agentId={user.id}
             agentPlan={agentPlan}
           />
         </div>

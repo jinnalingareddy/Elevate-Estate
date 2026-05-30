@@ -15,7 +15,7 @@ import {
 // protected pages skip the profile query on every request.
 
 const ROLE_COOKIE = "__ee_r";
-const ROLE_TTL_SEC = 300; // 5 minutes
+const ROLE_TTL_SEC = 1800; // 30 minutes — role changes are rare; saves a DB round-trip per 5-min expiry
 
 // Module-level cache for the HMAC CryptoKey to avoid re-importing on every request.
 let _roleKey: CryptoKey | null = null;
@@ -187,11 +187,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // getUser() validates the JWT with the Supabase auth server — required to
-  // avoid the "getSession insecure" warning and to ensure the session is genuine.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const prefix = getLocalePrefix(pathname);
 

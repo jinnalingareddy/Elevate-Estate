@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { AuthPage } from "@/components/agent/AuthPage";
+import dynamic from "next/dynamic";
 
 export const metadata: Metadata = {
   title: "Portal de Agentes — EstateElevate",
   description: "Inicia sesión o regístrate para gestionar tus propiedades en EstateElevate.",
 };
+
+const AuthPage = dynamic(
+  () => import("@/components/agent/AuthPage").then((m) => ({ default: m.AuthPage })),
+  { ssr: false }
+);
 
 export default function AgentAuthRoute({
   searchParams,

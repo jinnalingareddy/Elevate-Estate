@@ -33,14 +33,8 @@ export async function getAgentLeads(
   let query = supabase
     .from("leads")
     .select(
-      `
-      *,
-      listings (
-        id,
-        title,
-        slug
-      )
-    `
+      `id, agent_id, listing_id, status, read, name, email, phone, message, created_at,
+      listings ( id, title, slug )`
     )
     .eq("agent_id", agentId)
     .order("created_at", { ascending: false });
@@ -49,7 +43,7 @@ export async function getAgentLeads(
   if (filters.read !== undefined) query = query.eq("read", filters.read);
   if (filters.listing_id) query = query.eq("listing_id", filters.listing_id);
 
-  const limit = filters.limit ?? 100;
+  const limit = filters.limit ?? 200;
   const offset = filters.offset ?? 0;
   query = query.range(offset, offset + limit - 1);
 

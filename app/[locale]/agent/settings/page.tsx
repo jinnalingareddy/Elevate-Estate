@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { SettingsPageShell } from "@/components/agent/SettingsPageShell";
@@ -13,19 +13,21 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
+
+  const agentId = user.id;
   const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) redirect("/agent/auth");
-
-  const agentId = session.user.id;
 
   const [profileRes, subscription] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", agentId).single(),
+    // Narrowed — only columns the settings form actually displays/edits.
+    supabase
+      .from("profiles")
+      .select(
+        "id, full_name, email, bio, agency_name, phone, whatsapp, avatar_url, role, plan, email_notifications, whatsapp_notifications, created_at"
+      )
+      .eq("id", agentId)
+      .single(),
     getAgentSubscription(agentId).catch(() => null),
   ]);
 

@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useClientAuth } from "@/components/providers/ClientAuthProvider";
@@ -20,41 +21,45 @@ const FavoritesContext = createContext<FavoritesCtx>({
   favorites: new Set(),
   toggleFavorite: async () => ({ authed: false }),
   isFavorited: () => false,
-  loading: true,
+  loading: false,
 });
 
 const LS_KEY = "ee_favorites";
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  // loading is only true while the background API sync is in-flight,
+  // but it no longer blocks page render — localStorage is shown immediately.
+  const [loading, setLoading] = useState(false);
   const { user, authLoading } = useClientAuth();
+  const synced = useRef(false);
 
-  // Load from localStorage immediately (no flash), then sync with API once auth resolves.
-  // Unauthenticated users never hit the API — localStorage is the source of truth for them.
+  // Step 1: hydrate from localStorage synchronously on mount — zero delay.
   useEffect(() => {
     try {
       const stored = localStorage.getItem(LS_KEY);
       if (stored) setFavorites(new Set(JSON.parse(stored)));
     } catch {
-      // ignore
+      // ignore corrupt storage
     }
+  }, []);
 
-    if (authLoading) return; // wait for auth state to resolve
+  // Step 2: once auth resolves, sync with the server in the background.
+  // The page is already interactive at this point — this is a silent refresh.
+  useEffect(() => {
+    if (authLoading || synced.current) return;
+    if (!user) return; // unauthenticated: localStorage is source of truth
 
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    synced.current = true;
+    setLoading(true);
 
-    fetch("/api/favorites")
+    fetch("/api/favorites", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { favorites: [] }))
       .then(({ favorites: ids }: { favorites: string[] }) => {
-        if (Array.isArray(ids)) {
-          const next = new Set<string>(ids);
-          setFavorites(next);
-          localStorage.setItem(LS_KEY, JSON.stringify(Array.from(next)));
-        }
+        if (!Array.isArray(ids)) return;
+        const next = new Set<string>(ids);
+        setFavorites(next);
+        localStorage.setItem(LS_KEY, JSON.stringify(Array.from(next)));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -62,7 +67,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   const toggleFavorite = useCallback(
     async (listingId: string): Promise<{ authed: boolean }> => {
-      // Optimistic update
+      // Optimistic update — UI responds instantly, no waiting for server.
       setFavorites((prev) => {
         const next = new Set(prev);
         if (next.has(listingId)) next.delete(listingId);
@@ -91,7 +96,6 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         }
 
         const data = await res.json();
-        // Reconcile with server truth
         setFavorites((prev) => {
           const next = new Set(prev);
           if (data.favorited) next.add(listingId);
@@ -113,7 +117,9 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <FavoritesContext.Provider value={{ favorites, toggleFavorite, isFavorited, loading }}>
+    <FavoritesContext.Provider
+      value={{ favorites, toggleFavorite, isFavorited, loading }}
+    >
       {children}
     </FavoritesContext.Provider>
   );

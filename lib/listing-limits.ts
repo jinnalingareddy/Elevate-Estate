@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getSupabaseServerClient } from "./supabase/server";
 import { config } from "./config";
 import type { PlanType } from "./supabase/types";
@@ -59,10 +60,17 @@ export async function canCreateListing(agentId: string): Promise<boolean> {
   return available > 0;
 }
 
-export async function getListingLimitInfo(agentId: string): Promise<ListingLimitInfo> {
-  const supabase = getSupabaseServerClient();
-  const { plan, planLimit, activeListings, paidSlots } = await fetchLimitData(agentId, supabase);
-  const subscriptionSlots = Math.max(0, planLimit - activeListings);
-  const available = subscriptionSlots + paidSlots;
-  return { plan, planLimit, activeListings, paidSlots, available };
-}
+// Memoized per-request: multiple pages/components calling this for the same
+// agentId within one render pass share the result — the 3 DB queries run once.
+export const getListingLimitInfo = cache(
+  async (agentId: string): Promise<ListingLimitInfo> => {
+    const supabase = getSupabaseServerClient();
+    const { plan, planLimit, activeListings, paidSlots } = await fetchLimitData(
+      agentId,
+      supabase
+    );
+    const subscriptionSlots = Math.max(0, planLimit - activeListings);
+    const available = subscriptionSlots + paidSlots;
+    return { plan, planLimit, activeListings, paidSlots, available };
+  }
+);

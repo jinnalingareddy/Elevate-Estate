@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getListingLimitInfo, canCreateListing } from "@/lib/listing-limits";
+import { getAuthUser } from "@/lib/supabase/server";
+import { canCreateListing } from "@/lib/listing-limits";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { ListingForm } from "@/components/agent/ListingForm";
@@ -16,16 +16,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function NewListingPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  if (!session) redirect("/agent/auth");
-
-  const agentId = session.user.id;
+  const agentId = user.id;
 
   const [canCreate, subscription] = await Promise.all([
     canCreateListing(agentId).catch(() => false),
@@ -39,7 +33,6 @@ export default async function NewListingPage() {
       <AgentSidebar />
       <main className="flex-1 lg:pl-64">
         <div className="px-4 sm:px-8 pb-8 pt-14 lg:pt-8 max-w-3xl">
-          {/* Back link */}
           <Link
             href="/agent/listings"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-6"
@@ -63,8 +56,8 @@ export default async function NewListingPage() {
                 Tu plan{" "}
                 <strong>{config.plans[agentPlan].name}</strong> permite hasta{" "}
                 <strong>{config.plans[agentPlan].listingLimit}</strong>{" "}
-                propiedad{config.plans[agentPlan].listingLimit !== 1 ? "es" : ""} activa. Actualiza tu plan
-                o compra una publicación individual para continuar.
+                propiedad{config.plans[agentPlan].listingLimit !== 1 ? "es" : ""} activa. Actualiza
+                tu plan o compra una publicación individual para continuar.
               </p>
               <div className="flex justify-center gap-3 flex-wrap">
                 <Link

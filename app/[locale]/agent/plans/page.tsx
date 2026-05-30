@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
 import { getListingLimitInfo } from "@/lib/listing-limits";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
@@ -13,16 +13,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PlansPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  if (!session) redirect("/agent/auth");
-
-  const agentId = session.user.id;
+  const agentId = user.id;
 
   const [subscription, limitInfo] = await Promise.all([
     getAgentSubscription(agentId).catch(() => null),

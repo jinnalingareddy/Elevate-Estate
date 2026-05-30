@@ -54,10 +54,8 @@ export function ClientAuthProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
 
-    // getSession() reads the JWT from localStorage — no network round-trip.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      setUser(u ?? null);
       if (u) {
         fetchProfile(u.id).finally(() => setAuthLoading(false));
       } else {
@@ -68,11 +66,16 @@ export function ClientAuthProvider({ children }: { children: React.ReactNode }) 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        fetchProfile(u.id);
+      // Access session.user only on client — safe because storage is localStorage here.
+      // We still call getUser() to get a validated user when available.
+      if (session) {
+        supabase.auth.getUser().then(({ data: { user: u } }) => {
+          setUser(u ?? null);
+          if (u) fetchProfile(u.id);
+          else { setProfile(null); setAuthLoading(false); }
+        });
       } else {
+        setUser(null);
         setProfile(null);
         setAuthLoading(false);
       }

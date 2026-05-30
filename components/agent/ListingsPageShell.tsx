@@ -2,6 +2,7 @@
 
 import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -301,11 +302,13 @@ export function ListingsPageShell({
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {cover ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={cover.thumbnail_url}
                               alt={listing.title}
+                              width={56}
+                              height={40}
                               className="h-10 w-14 rounded-lg object-cover shrink-0"
+                              loading="lazy"
                             />
                           ) : (
                             <div className="h-10 w-14 rounded-lg bg-slate-100 dark:bg-slate-700 shrink-0" />
