@@ -49,6 +49,7 @@ export function AgentPreviewBar() {
 
   return (
     <div
+      aria-hidden={!visible}
       className={cn(
         "fixed top-0 inset-x-0 z-[60]",        // above Navbar (z-50)
         "bg-slate-900 border-b border-slate-700",

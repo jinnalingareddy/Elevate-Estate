@@ -91,6 +91,7 @@ function RowMenu({ listing, onEdit, onToggle, onDelete }: RowMenuProps) {
           />
         )}
         <div
+          aria-hidden={!open}
           style={{ top: menuPos.top, right: menuPos.right }}
           className={cn(
             "fixed z-20 w-44",

@@ -255,6 +255,7 @@ export function AgentSidebar() {
       {/* ── Mobile slide-in ───────────────────────────────────────────────── */}
       {/* Backdrop */}
       <div
+        aria-hidden={!mobileOpen}
         className={cn(
           "lg:hidden fixed inset-0 z-40 bg-black/60 transition-opacity duration-200",
           mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"

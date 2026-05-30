@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "inline-flex items-center justify-center font-medium rounded-lg",
-    "transition-colors transition-transform focus-visible:outline-none focus-visible:ring-2",
+    "transition-all focus-visible:outline-none focus-visible:ring-2",
     "focus-visible:ring-gold-500 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
   ].join(" "),
