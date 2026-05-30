@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, MapPin as MapPinIcon } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
 import { ListingList } from "@/components/search/ListingList";
 import { cn } from "@/lib/utils";
-import type { Listing, MapPin as MapPinType } from "@/lib/supabase/types";
+import type { ListingCard, MapPin as MapPinType } from "@/lib/supabase/types";
 
 // ─── Lazy map (Leaflet can't run on SSR) ──────────────────────────────────────
 
@@ -26,7 +26,7 @@ const MapView = dynamic(
 // ─── SearchShell ──────────────────────────────────────────────────────────────
 
 interface SearchShellProps {
-  listings: Listing[];
+  listings: ListingCard[];
   total: number;
   totalPages: number;
   mapPins: MapPinType[];

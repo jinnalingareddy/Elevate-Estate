@@ -77,6 +77,36 @@ export interface Listing {
   profiles?: Profile;
 }
 
+/** Subset of Listing returned by card-display queries (getListings, getFeaturedListings, getSimilarListings). */
+export type ListingCard = Pick<
+  Listing,
+  | "id"
+  | "slug"
+  | "title"
+  | "price"
+  | "currency"
+  | "city"
+  | "neighborhood"
+  | "bedrooms"
+  | "bathrooms"
+  | "total_area"
+  | "status"
+  | "listing_type"
+  | "property_type"
+  | "featured"
+  | "images"
+  | "created_at"
+> & {
+  area_sqm?: number | null;
+  agent_id?: string;
+  description?: string;
+  virtual_tour_url?: string | null;
+  profiles?: Pick<Profile, "id" | "full_name" | "avatar_url"> & {
+    phone?: string | null;
+    whatsapp?: string | null;
+  };
+};
+
 export type MapPin = {
   id: string;
   lat: number;

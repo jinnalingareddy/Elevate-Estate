@@ -11,7 +11,7 @@ import { CitiesGrid } from "@/components/home/CitiesGrid";
 import { CTABanner } from "@/components/home/CTABanner";
 import { getFeaturedListings } from "@/lib/supabase/queries/listings";
 import { Link } from "@/lib/navigation";
-import type { Listing } from "@/lib/supabase/types";
+import type { ListingCard } from "@/lib/supabase/types";
 
 export const revalidate = 300;
 
@@ -94,7 +94,7 @@ const FAQ_ITEMS = [
 export default async function HomePage() {
   const [t, featured] = await Promise.all([
     getTranslations("home"),
-    getFeaturedListings(5).catch(() => [] as Listing[]),
+    getFeaturedListings(5).catch(() => [] as ListingCard[]),
   ]);
 
   return (

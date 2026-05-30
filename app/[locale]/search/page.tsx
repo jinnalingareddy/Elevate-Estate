@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { SearchShell } from "@/components/search/SearchShell";
 import { getListings, getMapPins } from "@/lib/supabase/queries/listings";
-import type { ListingFilters, ListingType, PropertyType, Listing, MapPin } from "@/lib/supabase/types";
+import type { ListingFilters, ListingType, PropertyType, Listing, ListingCard, MapPin } from "@/lib/supabase/types";
 
 export const revalidate = 60;
 
@@ -86,7 +86,7 @@ export default async function SearchPage({
 }) {
   const filters = parseFilters(searchParams);
 
-  let listings: Listing[] = [];
+  let listings: ListingCard[] = [];
   let total = 0;
   let totalPages = 0;
   let mapPins: MapPin[] = [];

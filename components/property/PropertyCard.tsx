@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/Button";
 import { QuickContactModal } from "@/components/search/QuickContactModal";
 import { useFavorites } from "@/components/providers/FavoritesProvider";
 import { cn, formatPrice, formatArea } from "@/lib/utils";
-import type { Listing, PropertyType, ListingType } from "@/lib/supabase/types";
+import type { Listing, ListingCard, PropertyType, ListingType } from "@/lib/supabase/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ function isNew(createdAt: string): boolean {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function PhotoBadges({ listing }: { listing: Listing }) {
+function PhotoBadges({ listing }: { listing: Listing | ListingCard }) {
   const t = useTranslations("property");
   const listingCfg = LISTING_TYPE_CONFIG[listing.listing_type];
   const typeCfg = PROPERTY_TYPE_CONFIG[listing.property_type];
@@ -127,7 +127,7 @@ function FavoriteButton({
   );
 }
 
-function StatsRow({ listing }: { listing: Listing }) {
+function StatsRow({ listing }: { listing: Listing | ListingCard }) {
   const t = useTranslations("property");
   return (
     <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 flex-wrap">
@@ -156,7 +156,7 @@ function StatsRow({ listing }: { listing: Listing }) {
 // ─── PropertyCard ─────────────────────────────────────────────────────────────
 
 export interface PropertyCardProps {
-  listing: Listing;
+  listing: Listing | ListingCard;
   variant?: "horizontal" | "vertical" | "mini";
   onHover?: (id: string | null) => void;
   priority?: boolean;
@@ -317,7 +317,7 @@ export function PropertyCard({
           onOpenChange={setContactOpen}
           listingId={listing.id}
           listingTitle={listing.title}
-          agentId={listing.agent_id}
+          agentId={listing.agent_id ?? ""}
           agentName={listing.profiles?.full_name ?? null}
           agentWhatsApp={agentWhatsApp}
           agentAvatarUrl={listing.profiles?.avatar_url ?? null}
@@ -429,7 +429,7 @@ export function PropertyCard({
         onOpenChange={setContactOpen}
         listingId={listing.id}
         listingTitle={listing.title}
-        agentId={listing.agent_id}
+        agentId={listing.agent_id ?? ""}
         agentName={listing.profiles?.full_name ?? null}
         agentWhatsApp={agentWhatsApp}
         agentAvatarUrl={listing.profiles?.avatar_url ?? null}

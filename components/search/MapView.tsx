@@ -6,7 +6,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { PropertyCard } from "@/components/property/PropertyCard";
-import type { Listing, MapPin } from "@/lib/supabase/types";
+import type { Listing, ListingCard, MapPin } from "@/lib/supabase/types";
 
 // ─── Leaflet default icon fix (webpack asset hashing) ────────────────────────
 
@@ -121,7 +121,7 @@ function MapResizer({ visible }: { visible: boolean }) {
 // ─── MapView ──────────────────────────────────────────────────────────────────
 
 export interface MapViewProps {
-  listings: Listing[];
+  listings: ListingCard[];
   mapPins: MapPin[];
   hoveredListingId: string | null;
   onPinHover: (id: string | null) => void;
