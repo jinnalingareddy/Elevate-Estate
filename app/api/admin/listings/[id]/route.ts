@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
 import { deleteCloudinaryImage } from "@/lib/cloudinary-server";
 import type { ListingImage } from "@/lib/supabase/types";
@@ -58,6 +59,8 @@ export async function DELETE(
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
+
+  revalidateTag("listings");
 
   // 6. Log to admin_audit_log
   await db.from("admin_audit_logs").insert({

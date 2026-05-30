@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
 
 export async function POST(
@@ -64,6 +65,8 @@ export async function POST(
   if (!updated || updated.length === 0) {
     return NextResponse.json({ error: "Update afectó 0 filas — verifica SUPABASE_SERVICE_ROLE_KEY" }, { status: 500 });
   }
+
+  revalidateTag("listings");
 
   // 6. Log to admin_audit_logs
   await db.from("admin_audit_logs").insert({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
 import type { ListingStatus } from "@/lib/supabase/types";
 
@@ -65,6 +66,8 @@ export async function PATCH(
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
+
+  revalidateTag("listings");
 
   // 6. Log to admin_audit_log
   await db.from("admin_audit_logs").insert({

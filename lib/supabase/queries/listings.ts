@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseAnonClient } from "../server";
 import { deleteCloudinaryImage } from "@/lib/cloudinary-server";
 import type {
@@ -251,6 +251,7 @@ export async function createListing(data: CreateListingInput): Promise<Listing> 
     .single();
 
   if (error) throw new Error(error.message);
+  revalidateTag("listings");
   return created as Listing;
 }
 
@@ -268,6 +269,7 @@ export async function updateListing(
     .single();
 
   if (error) throw new Error(error.message);
+  revalidateTag("listings");
   return updated as Listing;
 }
 
@@ -292,6 +294,7 @@ export async function deleteListing(id: string): Promise<void> {
 
   const { error } = await supabase.from("listings").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  revalidateTag("listings");
 }
 
 export async function incrementViews(
