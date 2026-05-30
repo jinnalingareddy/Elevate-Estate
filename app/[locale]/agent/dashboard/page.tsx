@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
 
   // Pass limit: 1000 so activeListings count and DashboardShell listing list are accurate.
-  const listingsPromise = getAgentListings(agentId, { limit: 1000 })
+  const listingsPromise = getAgentListings(agentId, 1, 1000)
     .then((r) => r.data)
     .catch(() => [] as Listing[]);
 

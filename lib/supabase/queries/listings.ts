@@ -168,26 +168,28 @@ export const getListingBySlug = cache(
 
 // Narrowed columns — agent management pages don't need description, full
 // address fields, or the agent's own profile joined back on every row.
-export async function getAgentListings(
-  agentId: string,
-  { page = 1, limit = 50 }: { page?: number; limit?: number } = {}
-): Promise<{ data: Listing[]; total: number }> {
-  const supabase = getSupabaseServerClient();
-  const from = (page - 1) * limit;
+// Uses the anon client (no cookies) so it can run inside unstable_cache.
+export const getAgentListings = unstable_cache(
+  async (agentId: string, page = 1, limit = 50): Promise<{ data: Listing[]; total: number }> => {
+    const supabase = getSupabaseAnonClient();
+    const from = (page - 1) * limit;
 
-  const { data, count, error } = await supabase
-    .from("listings")
-    .select(
-      "id, agent_id, title, slug, status, price, currency, property_type, listing_type, city, neighborhood, bedrooms, bathrooms, total_area, images, views, featured, created_at, updated_at",
-      { count: "exact" }
-    )
-    .eq("agent_id", agentId)
-    .order("created_at", { ascending: false })
-    .range(from, from + limit - 1);
+    const { data, count, error } = await supabase
+      .from("listings")
+      .select(
+        "id, agent_id, title, slug, status, price, currency, property_type, listing_type, city, neighborhood, bedrooms, bathrooms, total_area, images, views, featured, created_at, updated_at",
+        { count: "exact" }
+      )
+      .eq("agent_id", agentId)
+      .order("created_at", { ascending: false })
+      .range(from, from + limit - 1);
 
-  if (error) throw new Error(error.message);
-  return { data: (data as Listing[]) ?? [], total: count ?? 0 };
-}
+    if (error) throw new Error(error.message);
+    return { data: (data as Listing[]) ?? [], total: count ?? 0 };
+  },
+  ["agent-listings"],
+  { revalidate: 30, tags: ["listings"] }
+);
 
 export const getFeaturedListings = cache(
   unstable_cache(

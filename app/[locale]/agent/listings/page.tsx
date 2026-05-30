@@ -38,10 +38,9 @@ export default async function ListingsPage({
     available: 1,
   }));
 
-  const { data: listings, total } = await getAgentListings(agentId, {
-    page,
-    limit: LIMIT,
-  }).catch(() => ({ data: [], total: 0 }));
+  const { data: listings, total } = await getAgentListings(agentId, page, LIMIT).catch(
+    () => ({ data: [], total: 0 })
+  );
 
   const listingIds = listings.map((l) => l.id);
   const totalPages = Math.ceil(total / LIMIT);
