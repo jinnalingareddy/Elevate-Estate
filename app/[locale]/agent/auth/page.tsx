@@ -1,9 +1,4 @@
-import dynamic from "next/dynamic";
-
-const AuthPage = dynamic(
-  () => import("@/components/agent/AuthPage").then((m) => ({ default: m.AuthPage })),
-  { ssr: false }
-);
+import { AuthPageClient } from "@/components/agent/AuthPageClient";
 
 export default async function AgentAuthRoute({
   searchParams,
@@ -12,7 +7,7 @@ export default async function AgentAuthRoute({
 }) {
   const params = await searchParams;
   return (
-    <AuthPage
+    <AuthPageClient
       errorParam={params.error}
       returnTo={params.returnTo}
       recoveryMode={params.type === "recovery"}
