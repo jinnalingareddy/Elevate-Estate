@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import { getAuthUser, getSupabaseServiceClient } from "@/lib/supabase/server";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { SettingsPageShell } from "@/components/agent/SettingsPageShell";
@@ -17,7 +17,9 @@ export default async function SettingsPage() {
   if (!user) redirect("/agent/auth");
 
   const agentId = user.id;
-  const supabase = getSupabaseServerClient();
+  // Middleware already verified the session — use the service client so this
+  // query is never blocked by a stale access-token JWT in the cookie store.
+  const supabase = getSupabaseServiceClient();
 
   const [profileRes, subscription] = await Promise.all([
     // Narrowed — only columns the settings form actually displays/edits.
@@ -31,9 +33,9 @@ export default async function SettingsPage() {
     getAgentSubscription(agentId).catch(() => null),
   ]);
 
-  if (!profileRes.data) redirect("/agent/auth");
+  if (!profileRes.data) notFound();
 
-  const profile = profileRes.data as Profile;
+  const profile = profileRes.data as unknown as Profile;
   const plan: PlanType = (subscription?.plan ?? "free") as PlanType;
 
   return (

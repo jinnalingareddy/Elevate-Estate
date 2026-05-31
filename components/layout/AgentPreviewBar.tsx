@@ -51,7 +51,7 @@ export function AgentPreviewBar() {
     <div
       aria-hidden={!visible}
       className={cn(
-        "fixed top-0 inset-x-0 z-[60]",        // above Navbar (z-50)
+        "fixed top-0 inset-x-0 z-[1010]",       // above Navbar (z-1000)
         "bg-slate-900 border-b border-slate-700",
         "flex items-center justify-between",
         "px-4 h-9 gap-3",
@@ -67,14 +67,14 @@ export function AgentPreviewBar() {
             </span>
             <span className="text-xs text-slate-500 hidden sm:block">·</span>
             <span className="text-xs text-white font-medium truncate">
-              {agentProfile!.full_name?.split(" ")[0] ?? "Agente"}
+              {agentProfile?.full_name?.split(" ")[0] ?? "Agente"}
             </span>
-            {agentProfile!.plan && (
+            {agentProfile?.plan && (
               <span className={cn(
                 "text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0",
-                PLAN_COLOR[agentProfile!.plan] ?? PLAN_COLOR.free
+                PLAN_COLOR[agentProfile.plan] ?? PLAN_COLOR.free
               )}>
-                {PLAN_LABEL[agentProfile!.plan] ?? agentProfile!.plan}
+                {PLAN_LABEL[agentProfile.plan] ?? agentProfile.plan}
               </span>
             )}
           </div>

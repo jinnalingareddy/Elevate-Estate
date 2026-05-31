@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser, getSupabaseServiceClient } from "@/lib/supabase/server";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { SupportPageShell } from "@/components/agent/SupportPageShell";
 
@@ -14,7 +14,7 @@ export default async function SupportPage() {
   const user = await getAuthUser();
   if (!user) redirect("/agent/auth");
 
-  const supabase = getSupabaseServerClient();
+  const supabase = getSupabaseServiceClient();
 
   // Only fetch the email column — this is all the support form needs.
   const { data: profile } = await supabase

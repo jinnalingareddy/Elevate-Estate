@@ -34,6 +34,7 @@ export async function getListings(filters: ListingFilters = {}): Promise<{
     city,
     neighborhood,
     state,
+    postal_code,
     property_type,
     listing_type,
     min_price,
@@ -57,8 +58,12 @@ export async function getListings(filters: ListingFilters = {}): Promise<{
     .eq("status", "active")
     .range(from, to);
 
-  if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
-  if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+  if (postal_code) {
+    query = query.eq("postal_code", postal_code);
+  } else {
+    if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
+    if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+  }
   if (state) query = query.ilike("state", `%${state}%`);
   if (property_type?.length) query = query.in("property_type", property_type);
   if (listing_type === "for_sale") {
@@ -104,6 +109,7 @@ export const getMapPins = cache(
         city,
         neighborhood,
         state,
+        postal_code,
         property_type,
         listing_type,
         min_price,
@@ -120,8 +126,12 @@ export const getMapPins = cache(
         .not("lng", "is", null)
         .limit(500);
 
-      if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
-      if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+      if (postal_code) {
+        query = query.eq("postal_code", postal_code);
+      } else {
+        if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
+        if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+      }
       if (state) query = query.ilike("state", `%${state}%`);
       if (property_type?.length) query = query.in("property_type", property_type);
       if (listing_type === "for_sale") {
@@ -239,7 +249,7 @@ export const getSimilarListings = cache(
 );
 
 export async function createListing(data: CreateListingInput): Promise<Listing> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const baseSlug = slugify(data.title);
   const slug = `${baseSlug}-${nanoid(6)}`;
@@ -251,7 +261,7 @@ export async function createListing(data: CreateListingInput): Promise<Listing> 
     .single();
 
   if (error) throw new Error(error.message);
-  revalidateTag("listings");
+  revalidateTag("listings", "default");
   return created as Listing;
 }
 
@@ -259,7 +269,7 @@ export async function updateListing(
   id: string,
   data: UpdateListingInput
 ): Promise<Listing> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: updated, error } = await supabase
     .from("listings")
@@ -269,12 +279,12 @@ export async function updateListing(
     .single();
 
   if (error) throw new Error(error.message);
-  revalidateTag("listings");
+  revalidateTag("listings", "default");
   return updated as Listing;
 }
 
 export async function deleteListing(id: string): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: listing, error: fetchError } = await supabase
     .from("listings")
@@ -294,14 +304,14 @@ export async function deleteListing(id: string): Promise<void> {
 
   const { error } = await supabase.from("listings").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  revalidateTag("listings");
+  revalidateTag("listings", "default");
 }
 
 export async function incrementViews(
   listingId: string,
   ipHash: string
 ): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 

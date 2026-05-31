@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
+import { notFound } from "next/navigation";
+import { redirect, Link } from "@/lib/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
@@ -16,21 +16,23 @@ export const dynamic = "force-dynamic";
 export default async function EditListingPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const user = await getAuthUser();
   if (!user) redirect("/agent/auth");
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
-  // Fetch listing and subscription in parallel.
   const [listingRes, subscription] = await Promise.all([
-    supabase.from("listings").select("*").eq("id", params.id).single(),
+    supabase.from("listings").select("*").eq("id", id).single(),
     getAgentSubscription(user.id).catch(() => null),
   ]);
 
   if (listingRes.error || !listingRes.data) notFound();
   const listing = listingRes.data;
+
+  if (listing.agent_id !== user.id) notFound();
 
   if (listing.agent_id !== user.id) notFound();
 

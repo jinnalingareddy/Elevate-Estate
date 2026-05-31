@@ -215,6 +215,7 @@ export interface ListingFilters {
   city?: string;
   neighborhood?: string;
   state?: string;
+  postal_code?: string;
   property_type?: PropertyType[];
   listing_type?: ListingType;
   min_price?: number;

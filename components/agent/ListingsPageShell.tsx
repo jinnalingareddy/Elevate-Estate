@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useI18nRouter } from "@/lib/navigation";
 import {
   Building2,
   Edit2,
@@ -149,7 +150,8 @@ export function ListingsPageShell({
   leadCounts,
   limitInfo,
 }: ListingsPageShellProps) {
-  const router = useRouter();
+  const router = useRouter();       // for router.refresh()
+  const i18nRouter = useI18nRouter(); // for locale-aware navigation
   const { addToast } = useToast();
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [deleteTarget, setDeleteTarget] = useState<Listing | null>(null);
@@ -201,6 +203,12 @@ export function ListingsPageShell({
     startTransition(() => router.refresh());
   }
 
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const l of listings) c[l.status] = (c[l.status] ?? 0) + 1;
+    return c;
+  }, [listings]);
+
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -232,7 +240,7 @@ export function ListingsPageShell({
       {/* ── Stats row ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {(["active", "draft", "pending", "sold"] as ListingStatus[]).map((status) => {
-          const count = listings.filter((l) => l.status === status).length;
+          const count = statusCounts[status] ?? 0;
           const { variant, label } = STATUS_STYLES[status];
           return (
             <div
@@ -350,7 +358,7 @@ export function ListingsPageShell({
                       <td className="px-4 py-3 text-right">
                         <RowMenu
                           listing={listing}
-                          onEdit={() => router.push(`/agent/listings/${listing.id}/edit`)}
+                          onEdit={() => i18nRouter.push(`/agent/listings/${listing.id}/edit`)}
                           onToggle={() => handleToggleStatus(listing)}
                           onDelete={() => setDeleteTarget(listing)}
                         />

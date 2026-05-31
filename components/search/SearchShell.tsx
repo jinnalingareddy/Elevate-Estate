@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, MapPin as MapPinIcon } from "lucide-react";
@@ -24,6 +24,10 @@ const MapView = dynamic(
 );
 
 // ─── SearchShell ──────────────────────────────────────────────────────────────
+// NOTE: This component is keyed from page.tsx using the serialised search
+// params, so it fully unmounts+remounts on every navigation. That means all
+// local state (including hasOpenedMap) resets cleanly and Leaflet always
+// receives a fresh DOM container.
 
 interface SearchShellProps {
   listings: ListingCard[];
@@ -39,18 +43,29 @@ export function SearchShell({ listings, total, totalPages, mapPins }: SearchShel
     if (typeof window === "undefined") return false;
     return localStorage.getItem("ee-map-collapsed") === "true";
   });
-  // Defer mounting the map until the user first opens it.
-  // On desktop the map is visible by default (unless previously collapsed), so
-  // we initialise hasOpenedMap to true only when the map starts uncollapsed.
-  const [hasOpenedMap, setHasOpenedMap] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("ee-map-collapsed") !== "true";
-  });
+  // Start false — IO below triggers Leaflet only when the map container enters
+  // the viewport. On desktop (map visible) the IO fires on mount. On mobile
+  // (map hidden via CSS) Leaflet never loads until the user taps "Ver Mapa",
+  // saving ~220 KB of JS on first visit.
+  const [hasOpenedMap, setHasOpenedMap] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // Reset map view when listings change (new search)
+  // Trigger Leaflet load as soon as the map panel is visible in the viewport.
   useEffect(() => {
-    setShowMap(false);
-  }, [listings]);
+    const el = mapContainerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasOpenedMap(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -80,14 +95,17 @@ export function SearchShell({ listings, total, totalPages, mapPins }: SearchShel
           </Suspense>
         </div>
 
-        {/* Right: map — always mounted to preserve Leaflet state.
-            Desktop: always visible. Mobile: fullscreen overlay when showMap=true */}
-        <div className={cn(
-          "flex-1 overflow-hidden bg-slate-100 dark:bg-slate-900 relative",
-          mapCollapsed ? "hidden" : "hidden md:block",
-          showMap && "!block fixed inset-0 z-30 md:static md:z-auto"
-        )}>
-          {/* Desktop collapse toggle — sits at the left edge of the map panel */}
+        {/* Right: map panel — always mounted on desktop to preserve Leaflet
+            state. Mobile: fullscreen overlay when showMap=true */}
+        <div
+          ref={mapContainerRef}
+          className={cn(
+            "flex-1 overflow-hidden bg-slate-100 dark:bg-slate-900 relative",
+            mapCollapsed ? "hidden" : "hidden md:block",
+            showMap && "!block fixed inset-0 z-30 md:static md:z-auto"
+          )}
+        >
+          {/* Desktop collapse toggle — left edge of the map panel */}
           <button
             type="button"
             onClick={() => {
@@ -114,7 +132,7 @@ export function SearchShell({ listings, total, totalPages, mapPins }: SearchShel
           )}
         </div>
 
-        {/* Desktop expand button — shown at right edge of listing panel when map is collapsed */}
+        {/* Desktop expand button — right edge of listing panel when map is collapsed */}
         {mapCollapsed && (
           <button
             type="button"
@@ -131,7 +149,7 @@ export function SearchShell({ listings, total, totalPages, mapPins }: SearchShel
         )}
       </div>
 
-      {/* ── Mobile map/list toggle button ────────────────────────────────── */}
+      {/* ── Mobile map/list toggle ────────────────────────────────────────── */}
       <AnimatePresence>
         <motion.button
           key="map-toggle"
@@ -142,7 +160,7 @@ export function SearchShell({ listings, total, totalPages, mapPins }: SearchShel
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
           onClick={() => {
             setShowMap((v) => {
-              if (!v) setHasOpenedMap(true); // switching to map mode — ensure map is mounted
+              if (!v) setHasOpenedMap(true); // switching to map — ensure it mounts
               return !v;
             });
           }}

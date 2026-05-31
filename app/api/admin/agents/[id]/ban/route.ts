@@ -6,10 +6,10 @@ import { config } from "@/lib/config";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // 1. Verify session
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: userError,
@@ -31,7 +31,7 @@ export async function POST(
     return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // 3. Fetch target profile for audit log
   const { data: target, error: fetchError } = await db

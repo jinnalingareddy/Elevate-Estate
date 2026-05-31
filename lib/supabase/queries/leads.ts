@@ -8,7 +8,7 @@ import type {
 } from "../types";
 
 export async function createLead(data: CreateLeadInput): Promise<Lead> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: created, error } = await supabase
     .from("leads")
@@ -28,7 +28,7 @@ export async function getAgentLeads(
   agentId: string,
   filters: LeadFilters = {}
 ): Promise<Lead[]> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   let query = supabase
     .from("leads")
@@ -49,14 +49,14 @@ export async function getAgentLeads(
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return (data as Lead[]) ?? [];
+  return (data as unknown as Lead[]) ?? [];
 }
 
 export async function updateLeadStatus(
   id: string,
   status: LeadStatus
 ): Promise<Lead> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("leads")
@@ -70,7 +70,7 @@ export async function updateLeadStatus(
 }
 
 export async function markLeadRead(id: string): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase
     .from("leads")
@@ -84,7 +84,7 @@ export async function getLeadCountsByListing(
   listingIds: string[]
 ): Promise<Record<string, number>> {
   if (listingIds.length === 0) return {};
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase
     .rpc("get_lead_counts_for_listings", { listing_ids: listingIds });
   if (error) throw new Error(error.message);
@@ -96,7 +96,7 @@ export async function getLeadCountsByListing(
 }
 
 export async function getLeadStats(agentId: string): Promise<LeadStats> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   // Single RPC call replaces 7 separate COUNT round-trips.
   // The SQL function uses conditional aggregation (COUNT FILTER) so

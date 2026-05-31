@@ -51,7 +51,7 @@ export async function createOrGetConektaCustomer(
   name: string,
   phone: string
 ): Promise<string> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: sub } = await supabase
     .from("subscriptions")

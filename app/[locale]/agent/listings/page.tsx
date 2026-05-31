@@ -19,13 +19,14 @@ const LIMIT = 50;
 export default async function ListingsPage({
   searchParams,
 }: {
-  searchParams?: { page?: string };
+  searchParams?: Promise<{ page?: string }>;
 }) {
   const user = await getAuthUser();
   if (!user) redirect("/agent/auth");
 
   const agentId = user.id;
-  const raw = Number(searchParams?.page);
+  const params = await searchParams;
+  const raw = Number(params?.page);
   const page = Math.max(1, Number.isFinite(raw) ? raw : 1);
 
   // Start limitInfo immediately (independent). Await listings only to get IDs for

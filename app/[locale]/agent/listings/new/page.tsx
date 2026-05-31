@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { redirect, Link } from "@/lib/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getAuthUser } from "@/lib/supabase/server";
-import { canCreateListing } from "@/lib/listing-limits";
-import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
+import { getListingLimitInfo } from "@/lib/listing-limits";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
-import { ListingForm } from "@/components/agent/ListingForm";
+import { ListingFormDynamic } from "@/components/agent/ListingFormDynamic";
 import { config } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -21,12 +19,9 @@ export default async function NewListingPage() {
 
   const agentId = user.id;
 
-  const [canCreate, subscription] = await Promise.all([
-    canCreateListing(agentId).catch(() => false),
-    getAgentSubscription(agentId).catch(() => null),
-  ]);
-
-  const agentPlan = (subscription?.plan ?? "free") as "free" | "pro" | "elite";
+  const limitInfo = await getListingLimitInfo(agentId).catch(() => null);
+  const canCreate = (limitInfo?.available ?? 0) > 0;
+  const agentPlan = (limitInfo?.plan ?? "free") as "free" | "pro" | "elite";
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -46,7 +41,7 @@ export default async function NewListingPage() {
           </h1>
 
           {canCreate ? (
-            <ListingForm mode="create" agentId={agentId} agentPlan={agentPlan} />
+            <ListingFormDynamic mode="create" agentId={agentId} agentPlan={agentPlan} />
           ) : (
             <div className="rounded-2xl border border-gold-200 dark:border-gold-800 bg-gold-50 dark:bg-gold-900/20 p-8 text-center">
               <p className="text-lg font-semibold text-gold-800 dark:text-gold-300 mb-2">

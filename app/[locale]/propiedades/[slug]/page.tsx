@@ -48,7 +48,7 @@ export const revalidate = 60;
 
 export async function generateStaticParams() {
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { data } = await supabase
       .from("listings")
       .select("slug")
@@ -65,9 +65,10 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const listing = await getListingBySlug(params.slug).catch(() => null);
+  const { slug } = await params;
+  const listing = await getListingBySlug(slug).catch(() => null);
   if (!listing) return { title: "Propiedad no encontrada" };
 
   const coverImage = listing.images[0]?.large_url;
@@ -130,14 +131,45 @@ async function hashIp(ip: string): Promise<string> {
     .slice(0, 16);
 }
 
+// ─── Similar listings — streamed in a separate RSC so it never blocks TTFB ───
+
+async function SimilarListingsSection({
+  listingId,
+  city,
+  propertyType,
+}: {
+  listingId: string;
+  city: string;
+  propertyType: PropertyType;
+}) {
+  const similar = await getSimilarListings(listingId, city, propertyType, 3).catch(() => []);
+  if (!similar.length) return null;
+  return (
+    <section aria-labelledby="similar-heading">
+      <h2
+        id="similar-heading"
+        className="text-xl font-bold font-serif text-slate-900 dark:text-slate-100 mb-6"
+      >
+        Propiedades Similares
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {similar.map((item) => (
+          <PropertyCard key={item.id} listing={item} variant="vertical" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function PropertyPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const listing = await getListingBySlug(params.slug).catch(() => null);
+  const { slug } = await params;
+  const listing = await getListingBySlug(slug).catch(() => null);
   if (!listing) notFound();
 
   // Preload hero image — React injects <link rel="preload"> into <head> during streaming
@@ -146,9 +178,7 @@ export default async function PropertyPage({
     ReactDOM.preload(heroImageUrl, { as: "image", fetchPriority: "high" });
   }
 
-  // Fire-and-forget view tracking (don't block page render).
-  // getSimilarListings runs in parallel.
-  const headersList = headers();
+  const headersList = await headers();
   const rawIp =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     headersList.get("x-real-ip") ??
@@ -158,8 +188,6 @@ export default async function PropertyPage({
   hashIp(rawIp)
     .then((ipHash) => incrementViews(listing.id, ipHash))
     .catch(() => {});
-
-  const similar = await getSimilarListings(listing.id, listing.city, listing.property_type, 3).catch(() => []);
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "https://estateelevate.mx";
@@ -364,26 +392,14 @@ export default async function PropertyPage({
                 </p>
               </section>
 
-              {/* Similar listings */}
-              {similar.length > 0 && (
-                <section aria-labelledby="similar-heading">
-                  <h2
-                    id="similar-heading"
-                    className="text-xl font-bold font-serif text-slate-900 dark:text-slate-100 mb-6"
-                  >
-                    Propiedades Similares
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {similar.map((item) => (
-                      <PropertyCard
-                        key={item.id}
-                        listing={item}
-                        variant="vertical"
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
+              {/* Similar listings — streamed after main content */}
+              <Suspense fallback={null}>
+                <SimilarListingsSection
+                  listingId={listing.id}
+                  city={listing.city}
+                  propertyType={listing.property_type}
+                />
+              </Suspense>
             </div>
 
             {/* ── RIGHT: Sticky sidebar 40% — hidden on mobile (MobileContactBar handles it) */}

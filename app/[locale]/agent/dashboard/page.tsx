@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 // ─── Async Server Components ──────────────────────────────────────────────────
 
 async function DashboardContent({ agentId }: { agentId: string }) {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now);

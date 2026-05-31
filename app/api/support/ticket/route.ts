@@ -19,7 +19,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   // 1. Auth check
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: authError,

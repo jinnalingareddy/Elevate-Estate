@@ -5,8 +5,8 @@ import { cookies, headers } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 
 // Memoized per-request — all callers within the same render share one instance.
-export const getSupabaseServerClient = cache(() => {
-  const cookieStore = cookies();
+export const getSupabaseServerClient = cache(async () => {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,7 +44,7 @@ export const getAuthUser = cache(async (): Promise<User | null> => {
     return { id: userId } as User;
   }
   // Fallback for public routes that optionally check auth (no middleware header).
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

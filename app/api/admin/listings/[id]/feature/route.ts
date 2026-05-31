@@ -4,10 +4,10 @@ import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabas
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // 1. Verify session
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: userError,
@@ -38,7 +38,7 @@ export async function POST(
     return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // 4. Fetch current value for audit log
   const { data: listing, error: fetchError } = await db
@@ -66,7 +66,7 @@ export async function POST(
     return NextResponse.json({ error: "Update afectó 0 filas — verifica SUPABASE_SERVICE_ROLE_KEY" }, { status: 500 });
   }
 
-  revalidateTag("listings");
+  revalidateTag("listings", "default");
 
   // 6. Log to admin_audit_logs
   await db.from("admin_audit_logs").insert({

@@ -6,7 +6,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 // The FavoritesProvider calls this in the background (non-blocking), so the
 // extra network round-trip (~300ms) no longer affects perceived page load time.
 async function getRequestUser() {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

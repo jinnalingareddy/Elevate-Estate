@@ -114,7 +114,7 @@ function FullscreenModal({
               alt={`${title} — foto ${current + 1}`}
               fill
               className="object-contain"
-              sizes="100vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1024px"
               priority
               placeholder="blur"
               blurDataURL={BLUR_PLACEHOLDER}
@@ -154,14 +154,13 @@ function FullscreenModal({
       {/* Preload prev/next images so navigation is instant */}
       <div className="sr-only" aria-hidden="true">
         {preloadIndices.map(i => (
-          <div key={images[i].public_id} style={{ position: "fixed", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }}>
-            <Image
-              src={images[i].medium_url}
-              alt=""
-              fill
-              sizes="100vw"
-            />
-          </div>
+          <Image
+            key={images[i].public_id}
+            src={images[i].medium_url}
+            alt=""
+            width={800}
+            height={600}
+          />
         ))}
       </div>
 

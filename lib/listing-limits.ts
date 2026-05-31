@@ -11,7 +11,7 @@ export interface ListingLimitInfo {
   available: number;
 }
 
-type SupabaseClient = ReturnType<typeof getSupabaseServerClient>;
+type SupabaseClient = Awaited<ReturnType<typeof getSupabaseServerClient>>;
 
 async function fetchLimitData(agentId: string, supabase: SupabaseClient) {
   const [subResult, activeResult, slotsResult] = await Promise.all([
@@ -49,7 +49,7 @@ async function fetchLimitData(agentId: string, supabase: SupabaseClient) {
 }
 
 export async function getAvailableSlots(agentId: string): Promise<number> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { planLimit, activeListings, paidSlots } = await fetchLimitData(agentId, supabase);
   const subscriptionSlots = Math.max(0, planLimit - activeListings);
   return subscriptionSlots + paidSlots;
@@ -64,7 +64,7 @@ export async function canCreateListing(agentId: string): Promise<boolean> {
 // agentId within one render pass share the result — the 3 DB queries run once.
 export const getListingLimitInfo = cache(
   async (agentId: string): Promise<ListingLimitInfo> => {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const { plan, planLimit, activeListings, paidSlots } = await fetchLimitData(
       agentId,
       supabase

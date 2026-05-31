@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Search, Star, Trash2, ChevronDown } from "lucide-react";
+import { Search, Trash2, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/DropdownMenu";
 import { cn, formatPrice } from "@/lib/utils";
-import type { Listing, ListingStatus, Profile } from "@/lib/supabase/types";
+import type { Listing, ListingStatus } from "@/lib/supabase/types";
 
 export type ListingRow = Pick<
   Listing,
@@ -97,45 +97,63 @@ function ConfirmDeleteModal({
 
 export function ListingsClient({
   listings,
-  agentFilter,
+  total,
+  page,
+  pageSize,
+  initialSearch,
+  initialStatus,
+  initialCity,
 }: {
   listings: ListingRow[];
-  agentFilter?: string;
+  total: number;
+  page: number;
+  pageSize: number;
+  initialSearch: string;
+  initialStatus: ListingStatus | "all";
+  initialCity: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">("all");
-  const [cityFilter, setCityFilter] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState<ListingStatus | "all">(initialStatus);
+  const [cityFilter, setCityFilter] = useState(initialCity);
   const [loadingFeature, setLoadingFeature] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ListingRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Optimistic featured state
-  const [featuredOverrides, setFeaturedOverrides] = useState<
-    Record<string, boolean>
-  >({});
+  const [featuredOverrides, setFeaturedOverrides] = useState<Record<string, boolean>>({});
 
-  const filtered = useMemo(() => {
-    let rows = agentFilter
-      ? listings.filter((l) => l.agent_id === agentFilter)
-      : listings;
+  function pushFilters(overrides: { search?: string; status?: string; city?: string; page?: number }) {
+    const params = new URLSearchParams(searchParams.toString());
+    const s = overrides.search ?? search;
+    const st = overrides.status ?? statusFilter;
+    const c = overrides.city ?? cityFilter;
+    const p = overrides.page ?? 0;
 
-    if (statusFilter !== "all")
-      rows = rows.filter((l) => l.status === statusFilter);
+    s ? params.set("search", s) : params.delete("search");
+    st !== "all" ? params.set("status", st) : params.delete("status");
+    c ? params.set("city", c) : params.delete("city");
+    p > 0 ? params.set("page", String(p)) : params.delete("page");
 
-    if (cityFilter.trim()) {
-      const q = cityFilter.toLowerCase();
-      rows = rows.filter((l) => l.city.toLowerCase().includes(q));
-    }
+    startTransition(() => router.push(`${pathname}?${params.toString()}`));
+  }
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      rows = rows.filter((l) => l.title.toLowerCase().includes(q));
-    }
+  // Debounce text inputs so we don't push a new URL on every keystroke
+  useEffect(() => {
+    const id = setTimeout(() => pushFilters({ search, page: 0 }), 400);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
-    return rows;
-  }, [listings, agentFilter, statusFilter, cityFilter, search]);
+  useEffect(() => {
+    const id = setTimeout(() => pushFilters({ city: cityFilter, page: 0 }), 400);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityFilter]);
+
+  const totalPages = Math.ceil(total / pageSize);
 
   async function handleFeatureToggle(listing: ListingRow) {
     const next =
@@ -236,9 +254,11 @@ export function ListingsClient({
 
         <select
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as ListingStatus | "all")
-          }
+          onChange={(e) => {
+            const v = e.target.value as ListingStatus | "all";
+            setStatusFilter(v);
+            pushFilters({ status: v, page: 0 });
+          }}
           className={cn(
             "px-3 py-2 text-sm rounded-lg",
             "border border-slate-200 dark:border-slate-700",
@@ -309,7 +329,7 @@ export function ListingsClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtered.length === 0 ? (
+              {listings.length === 0 ? (
                 <tr>
                   <td
                     colSpan={9}
@@ -319,7 +339,7 @@ export function ListingsClient({
                   </td>
                 </tr>
               ) : (
-                filtered.map((listing) => {
+                listings.map((listing) => {
                   const isFeatured =
                     featuredOverrides[listing.id] !== undefined
                       ? featuredOverrides[listing.id]
@@ -438,10 +458,35 @@ export function ListingsClient({
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
           <p className="text-xs text-slate-500">
-            {filtered.length} de {listings.length} propiedades
+            {listings.length === 0
+              ? "Sin resultados"
+              : `${page * pageSize + 1}–${page * pageSize + listings.length} de ${total.toLocaleString("es-MX")} propiedades`}
           </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => pushFilters({ page: page - 1 })}
+                disabled={page === 0 || isPending}
+                className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Página anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs text-slate-500">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => pushFilters({ page: page + 1 })}
+                disabled={page >= totalPages - 1 || isPending}
+                className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Página siguiente"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

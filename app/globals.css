@@ -1,3 +1,6 @@
+@import "react-leaflet-cluster/lib/assets/MarkerCluster.css";
+@import "react-leaflet-cluster/lib/assets/MarkerCluster.Default.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

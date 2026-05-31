@@ -11,18 +11,18 @@ function isLocale(value: unknown): value is Locale {
 
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
-  const cookieLocale = cookies().get("locale")?.value;
-  const resolved: Locale = isLocale(requested)
+  const cookieLocale = (await cookies()).get("locale")?.value;
+  const locale: Locale = isLocale(requested)
     ? requested
     : isLocale(cookieLocale)
       ? cookieLocale
       : "es";
 
-  if (!isLocale(resolved)) notFound();
+  if (!isLocale(locale)) notFound();
 
   return {
-    messages: (await import(`../../messages/${resolved}.json`)).default,
+    locale,
+    messages: (await import(`../../messages/${locale}.json`)).default,
     timeZone: "America/Mexico_City",
-    locale: resolved,
   };
 });

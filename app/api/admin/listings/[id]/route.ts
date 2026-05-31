@@ -6,10 +6,10 @@ import type { ListingImage } from "@/lib/supabase/types";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // 1. Verify session
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: userError,
@@ -31,7 +31,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // 3. Fetch listing for images + audit
   const { data: listing, error: fetchError } = await db
@@ -60,7 +60,7 @@ export async function DELETE(
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  revalidateTag("listings");
+  revalidateTag("listings", "default");
 
   // 6. Log to admin_audit_log
   await db.from("admin_audit_logs").insert({

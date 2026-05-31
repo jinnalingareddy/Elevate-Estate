@@ -1,26 +1,23 @@
-import type { Metadata } from "next";
-import dynamic from "next/dynamic";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Portal de Agentes — EstateElevate",
-  description: "Inicia sesión o regístrate para gestionar tus propiedades en EstateElevate.",
-};
+import dynamic from "next/dynamic";
 
 const AuthPage = dynamic(
   () => import("@/components/agent/AuthPage").then((m) => ({ default: m.AuthPage })),
   { ssr: false }
 );
 
-export default function AgentAuthRoute({
+export default async function AgentAuthRoute({
   searchParams,
 }: {
-  searchParams: { error?: string; returnTo?: string; type?: string };
+  searchParams: Promise<{ error?: string; returnTo?: string; type?: string }>;
 }) {
+  const params = await searchParams;
   return (
     <AuthPage
-      errorParam={searchParams.error}
-      returnTo={searchParams.returnTo}
-      recoveryMode={searchParams.type === "recovery"}
+      errorParam={params.error}
+      returnTo={params.returnTo}
+      recoveryMode={params.type === "recovery"}
     />
   );
 }
