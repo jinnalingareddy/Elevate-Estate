@@ -30,19 +30,48 @@ export async function GET(req: NextRequest) {
 
     if (expiredSubs && expiredSubs.length > 0) {
       const freePlanLimit = config.plans.free.listingLimit;
+      const agentIds = expiredSubs.map((s) => s.agent_id);
+
+      // Bulk-fetch all needed data in 2 queries instead of N*2 individual fetches.
+      const [{ data: allActiveListings }, { data: allProfiles }] =
+        await Promise.all([
+          db
+            .from("listings")
+            .select("id, title, agent_id")
+            .in("agent_id", agentIds)
+            .eq("status", "active")
+            .order("created_at", { ascending: true }),
+          db
+            .from("profiles")
+            .select("id, email, full_name")
+            .in("id", agentIds),
+        ]);
+
+      // Group listings by agent in memory.
+      const listingsByAgent = new Map<
+        string,
+        { id: string; title: string }[]
+      >();
+      for (const l of allActiveListings ?? []) {
+        if (!listingsByAgent.has(l.agent_id))
+          listingsByAgent.set(l.agent_id, []);
+        listingsByAgent.get(l.agent_id)!.push({ id: l.id, title: l.title });
+      }
+
+      // Index profiles by id in memory.
+      const profileById = new Map<
+        string,
+        { email: string; full_name: string | null }
+      >();
+      for (const p of allProfiles ?? []) {
+        profileById.set(p.id, { email: p.email, full_name: p.full_name });
+      }
 
       await Promise.all(
         expiredSubs.map(async ({ agent_id }) => {
           try {
-            // Draft excess listings
-            const { data: active } = await db
-              .from("listings")
-              .select("id, title")
-              .eq("agent_id", agent_id)
-              .eq("status", "active")
-              .order("created_at", { ascending: true });
-
-            const toDraft = (active ?? []).slice(freePlanLimit);
+            const active = listingsByAgent.get(agent_id) ?? [];
+            const toDraft = active.slice(freePlanLimit);
             const draftedTitles: string[] = [];
 
             if (toDraft.length > 0) {
@@ -53,30 +82,28 @@ export async function GET(req: NextRequest) {
                   "id",
                   toDraft.map((l) => l.id)
                 );
-              draftedTitles.push(...toDraft.map((l) => l.title as string));
+              draftedTitles.push(...toDraft.map((l) => l.title));
             }
 
-            // Downgrade to free
+            // Downgrade subscription and profile in parallel.
             await Promise.all([
-              db.from("subscriptions").update({
-                plan: "free",
-                status: "cancelled",
-                grace_period_end: null,
-              }).eq("agent_id", agent_id),
+              db
+                .from("subscriptions")
+                .update({
+                  plan: "free",
+                  status: "cancelled",
+                  grace_period_end: null,
+                })
+                .eq("agent_id", agent_id),
               db
                 .from("profiles")
                 .update({ plan: "free" })
                 .eq("id", agent_id),
             ]);
 
-            // Notify agent
+            // Notify agent — uses the already-fetched profile, no extra DB call.
             if (draftedTitles.length > 0) {
-              const { data: agent } = await db
-                .from("profiles")
-                .select("email, full_name")
-                .eq("id", agent_id)
-                .maybeSingle();
-
+              const agent = profileById.get(agent_id);
               if (agent?.email) {
                 await sendListingsDraftedEmail(
                   agent.email,
@@ -120,7 +147,7 @@ export async function GET(req: NextRequest) {
                 .from("listings")
                 .update({ status: "draft" })
                 .eq("id", listing_id)
-                .eq("status", "active"); // only draft if still active
+                .eq("status", "active");
             }
 
             slotsExpired++;

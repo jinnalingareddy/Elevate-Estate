@@ -1,10 +1,8 @@
 "use client";
 
 import * as Radix from "@radix-ui/react-dropdown-menu";
-import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronRight, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 

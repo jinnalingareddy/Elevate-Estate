@@ -6,9 +6,9 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { PropertyCard } from "@/components/property/PropertyCard";
-import type { Listing, MapPin } from "@/lib/supabase/types";
+import type { ListingCard, MapPin } from "@/lib/supabase/types";
 
-// ─── Leaflet default icon fix (webpack asset hashing) ────────────────────────
+// ─── Leaflet default icon fix ─────────────────────────────────────────────────
 
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -33,7 +33,7 @@ const MAP_STYLE_LABELS: Record<keyof typeof TILE_URLS, string> = {
   satellite: "☀️ Claro",
 };
 
-// ─── Cluster icon (gold bubble matching brand) ────────────────────────────────
+// ─── Cluster icon ─────────────────────────────────────────────────────────────
 
 function createClusterIcon(cluster: { getChildCount: () => number }): L.DivIcon {
   const count = cluster.getChildCount();
@@ -62,9 +62,8 @@ function formatPinPrice(price: number): string {
 }
 
 function createPinIcon(price: number, active: boolean): L.DivIcon {
-  const bg = active ? "#c47c12" : "#e09f1a"; // gold-600 on hover, gold-500 default
+  const bg = active ? "#c47c12" : "#e09f1a";
   const scale = active ? "scale(1.3)" : "scale(1)";
-  const label = formatPinPrice(price);
   return L.divIcon({
     className: "",
     iconSize: [80, 30],
@@ -80,37 +79,30 @@ function createPinIcon(price: number, active: boolean): L.DivIcon {
         transform:${scale};
         transition:transform 200ms ease,background 200ms ease;
         white-space:nowrap;
-      ">${label}</div>
+      ">${formatPinPrice(price)}</div>
     `,
   });
 }
 
-// ─── Fit bounds on mount ──────────────────────────────────────────────────────
+// ─── Inner map helpers (must be rendered inside MapContainer) ─────────────────
 
 function FitBounds({ pins }: { pins: MapPin[] }) {
   const map = useMap();
   useEffect(() => {
     if (pins.length === 0) return;
-    if (pins.length === 1) {
-      map.setView([pins[0].lat, pins[0].lng], 14);
-      return;
-    }
+    if (pins.length === 1) { map.setView([pins[0].lat, pins[0].lng], 14); return; }
     const bounds = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
     map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13 });
   }, [map, pins]);
   return null;
 }
 
-// ─── Force tile reload when map container becomes visible ─────────────────────
-
 function MapResizer({ visible }: { visible: boolean }) {
   const map = useMap();
   const prevVisible = useRef(false);
   useEffect(() => {
     if (visible && !prevVisible.current) {
-      const t = setTimeout(() => {
-        map.invalidateSize({ animate: false });
-      }, 120);
+      const t = setTimeout(() => map.invalidateSize({ animate: false }), 120);
       return () => clearTimeout(t);
     }
     prevVisible.current = visible;
@@ -118,33 +110,31 @@ function MapResizer({ visible }: { visible: boolean }) {
   return null;
 }
 
+// ─── Initial view ─────────────────────────────────────────────────────────────
+
+function getInitialView(pins: MapPin[]): { center: [number, number]; zoom: number } {
+  if (pins.length === 0) return { center: [23.6345, -102.5528], zoom: 5 };
+  if (pins.length === 1) return { center: [pins[0].lat, pins[0].lng], zoom: 13 };
+  const avgLat = pins.reduce((s, p) => s + p.lat, 0) / pins.length;
+  const avgLng = pins.reduce((s, p) => s + p.lng, 0) / pins.length;
+  const latSpread = Math.max(...pins.map((p) => p.lat)) - Math.min(...pins.map((p) => p.lat));
+  const zoom = latSpread < 0.5 ? 13 : latSpread < 2 ? 11 : 9;
+  return { center: [avgLat, avgLng], zoom };
+}
+
 // ─── MapView ──────────────────────────────────────────────────────────────────
 
 export interface MapViewProps {
-  listings: Listing[];
+  listings: ListingCard[];
   mapPins: MapPin[];
   hoveredListingId: string | null;
   onPinHover: (id: string | null) => void;
   visible?: boolean;
 }
 
-// Compute initial center/zoom from pins so the map opens in the right place.
-// Falls back to Mexico's geographic center if no pins have coordinates.
-function getInitialView(pins: MapPin[]): { center: [number, number]; zoom: number } {
-  if (pins.length === 0) return { center: [23.6345, -102.5528], zoom: 5 };
-  if (pins.length === 1) return { center: [pins[0].lat, pins[0].lng], zoom: 13 };
-  const avgLat = pins.reduce((s, p) => s + p.lat, 0) / pins.length;
-  const avgLng = pins.reduce((s, p) => s + p.lng, 0) / pins.length;
-  // Tighter zoom when pins are clustered in one city
-  const latSpread = Math.max(...pins.map((p) => p.lat)) - Math.min(...pins.map((p) => p.lat));
-  const zoom = latSpread < 0.5 ? 13 : latSpread < 2 ? 11 : 9;
-  return { center: [avgLat, avgLng], zoom };
-}
-
 export function MapView({ listings, mapPins, hoveredListingId, onPinHover, visible = true }: MapViewProps) {
   const { center, zoom } = getInitialView(mapPins);
 
-  // Persisted map style preference — safe because MapView is SSR-disabled
   const [mapStyle, setMapStyle] = useState<keyof typeof TILE_URLS>(() => {
     if (typeof window === "undefined") return "light";
     const saved = localStorage.getItem("ee-map-style") as keyof typeof TILE_URLS | null;
@@ -172,102 +162,85 @@ export function MapView({ listings, mapPins, hoveredListingId, onPinHover, visib
         }
         .leaflet-popup-content { margin: 0 !important; }
         .leaflet-popup-tip-container { display: none; }
-        .leaflet-control-attribution {
-          font-size: 10px;
-          opacity: 0.6;
-        }
-        .leaflet-control-zoom a {
-          color: #e09f1a !important;
-          font-weight: 700 !important;
-        }
-        .leaflet-control-zoom a:hover {
-          color: #c47c12 !important;
-          background: #fef9ec !important;
-        }
+        .leaflet-control-attribution { font-size: 10px; opacity: 0.6; }
+        .leaflet-control-zoom a { color: #e09f1a !important; font-weight: 700 !important; }
+        .leaflet-control-zoom a:hover { color: #c47c12 !important; background: #fef9ec !important; }
         .leaflet-marker-icon { border: none !important; background: transparent !important; }
         .leaflet-popup-close-button {
-          top: 6px !important;
-          right: 8px !important;
-          color: #94a3b8 !important;
-          font-size: 18px !important;
-          font-weight: 400 !important;
-          line-height: 1 !important;
+          top: 6px !important; right: 8px !important;
+          color: #94a3b8 !important; font-size: 18px !important;
+          font-weight: 400 !important; line-height: 1 !important;
         }
-        .leaflet-popup-close-button:hover {
-          color: #475569 !important;
-        }
+        .leaflet-popup-close-button:hover { color: #475569 !important; }
       `}</style>
 
       <MapContainer
-        center={center}
-        zoom={zoom}
-        scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%" }}
-      >
-        {/* key forces TileLayer remount when style changes — react-leaflet doesn't update url reactively */}
-        <TileLayer
-          key={mapStyle}
-          url={TILE_URLS[mapStyle]}
-          attribution={
-            mapStyle === "satellite"
-              ? "Tiles &copy; Esri"
-              : '&copy; <a href="https://carto.com/">CARTO</a>'
-          }
-          subdomains={mapStyle === "satellite" ? "" : "abcd"}
-          maxZoom={19}
-        />
-
-        <FitBounds pins={mapPins} />
-        <MapResizer visible={visible} />
-
-        <MarkerClusterGroup
-          iconCreateFunction={createClusterIcon}
-          maxClusterRadius={60}
-          showCoverageOnHover={false}
-          spiderfyOnMaxZoom
+          center={center}
+          zoom={zoom}
+          scrollWheelZoom={false}
+          style={{ height: "100%", width: "100%" }}
         >
-          {mapPins.map((pin) => {
-            const fullListing = listings.find((l) => l.id === pin.id);
-            return (
-              <Marker
-                key={pin.id}
-                position={[pin.lat, pin.lng]}
-                icon={createPinIcon(pin.price, hoveredListingId === pin.id)}
-                eventHandlers={{
-                  mouseover: () => onPinHover(pin.id),
-                  mouseout: () => onPinHover(null),
-                }}
-              >
-                <Popup minWidth={224} maxWidth={224}>
-                  {fullListing ? (
-                    <PropertyCard listing={fullListing} variant="mini" />
-                  ) : (
-                    <div style={{
-                      background: "#fff",
-                      borderRadius: "10px",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-                      padding: "12px 14px",
-                      minWidth: 190,
-                      fontFamily: "system-ui, sans-serif",
-                    }}>
-                      <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 13, color: "#1e293b", lineHeight: 1.35 }}>{pin.title}</p>
-                      <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 15, color: "#e09f1a" }}>{formatPinPrice(pin.price)}</p>
-                      <a
-                        href={`/propiedades/${pin.slug}`}
-                        style={{ fontSize: 12, color: "#e09f1a", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid #e09f1a", paddingBottom: 1 }}
-                      >
-                        Ver propiedad →
-                      </a>
-                    </div>
-                  )}
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MarkerClusterGroup>
-      </MapContainer>
+          <TileLayer
+            key={mapStyle}
+            url={TILE_URLS[mapStyle]}
+            attribution={
+              mapStyle === "satellite"
+                ? "Tiles &copy; Esri"
+                : '&copy; <a href="https://carto.com/">CARTO</a>'
+            }
+            subdomains={mapStyle === "satellite" ? "" : "abcd"}
+            maxZoom={19}
+          />
 
-      {/* Map style toggle — sits above Leaflet tiles; raised on mobile to avoid "Ver Mapa" FAB */}
+          <FitBounds pins={mapPins} />
+          <MapResizer visible={visible} />
+
+          <MarkerClusterGroup
+            iconCreateFunction={createClusterIcon}
+            maxClusterRadius={60}
+            showCoverageOnHover={false}
+            spiderfyOnMaxZoom
+          >
+            {mapPins.map((pin) => {
+              const fullListing = listings.find((l) => l.id === pin.id);
+              return (
+                <Marker
+                  key={pin.id}
+                  position={[pin.lat, pin.lng]}
+                  icon={createPinIcon(pin.price, hoveredListingId === pin.id)}
+                  eventHandlers={{
+                    mouseover: () => onPinHover(pin.id),
+                    mouseout: () => onPinHover(null),
+                  }}
+                >
+                  <Popup minWidth={224} maxWidth={224}>
+                    {fullListing ? (
+                      <PropertyCard listing={fullListing} variant="mini" />
+                    ) : (
+                      <div style={{
+                        background: "#fff", borderRadius: "10px",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+                        padding: "12px 14px", minWidth: 190,
+                        fontFamily: "system-ui, sans-serif",
+                      }}>
+                        <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 13, color: "#1e293b", lineHeight: 1.35 }}>{pin.title}</p>
+                        <p style={{ margin: "0 0 10px", fontWeight: 700, fontSize: 15, color: "#e09f1a" }}>{formatPinPrice(pin.price)}</p>
+                        <a
+                          href={`/propiedades/${pin.slug}`}
+                          style={{ fontSize: 12, color: "#e09f1a", fontWeight: 600, textDecoration: "none", borderBottom: "1px solid #e09f1a", paddingBottom: 1 }}
+                        >
+                          Ver propiedad →
+                        </a>
+                      </div>
+                    )}
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </MarkerClusterGroup>
+        </MapContainer>
+
+      {/* Map style toggle */}
       <button
         type="button"
         onClick={toggleMapStyle}

@@ -1,5 +1,6 @@
 // @ts-check
 
+const path = require("path");
 const { withSentryConfig } = require("@sentry/nextjs");
 const createNextIntlPlugin = require("next-intl/plugin");
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
@@ -23,8 +24,27 @@ if (process.env.NODE_ENV === "development") {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["react-leaflet-cluster"],
-  images: { remotePatterns },
+  // react-leaflet v4 is incompatible with React 18 Strict Mode: the double
+  // mount→cleanup→remount cycle batches the state updates so MapContainer
+  // never actually unmounts between cycles, leaving Leaflet's _leaflet_id on
+  // the container and throwing "Map container is already initialized".
+  // Strict Mode is development-only — production is unaffected.
+  reactStrictMode: false,
+
+  // react-leaflet-cluster's index.js does require("./assets/MarkerCluster.css")
+  // which turbopack cannot handle. We alias the package to a local vendor copy
+  // that has the CSS requires stripped out. The CSS is loaded globally via
+  // app/globals.css. The alias is applied for both turbopack (dev) and webpack
+  // (production).
+  turbopack: {
+    resolveAlias: {
+      "react-leaflet-cluster": "./lib/map/marker-cluster-group.js",
+    },
+  },
+  images: {
+    remotePatterns,
+    minimumCacheTTL: 31536000,
+  },
 
   async headers() {
     return [
@@ -62,11 +82,31 @@ const nextConfig = {
     ];
   },
 
+  devIndicators: false,
+
   experimental: {
     staleTimes: {
       dynamic: 0,
       static: 3600,
     },
+  },
+
+  webpack(config, { nextRuntime }) {
+    // @upstash/redis resolves to nodejs.mjs (uses process.version) when the
+    // "node" export condition is present. Strip it for the edge middleware
+    // bundle so the fetch-based variant is used instead.
+    if (nextRuntime === "edge") {
+      config.resolve.conditionNames = (
+        config.resolve.conditionNames ?? []
+      ).filter((/** @type {string} */ c) => c !== "node");
+    }
+    // Alias react-leaflet-cluster to our local vendor copy that has the CSS
+    // requires stripped out (same alias as turbopack above, for webpack/prod).
+    config.resolve.alias["react-leaflet-cluster"] = path.resolve(
+      __dirname,
+      "lib/map/marker-cluster-group.js"
+    );
+    return config;
   },
 };
 

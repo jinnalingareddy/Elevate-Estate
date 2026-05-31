@@ -4,7 +4,7 @@ import type { Subscription, ListingSlot } from "../types";
 export async function getAgentSubscription(
   agentId: string
 ): Promise<Subscription | null> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("subscriptions")
@@ -20,7 +20,7 @@ export async function upsertSubscription(
   agentId: string,
   data: Partial<Subscription>
 ): Promise<Subscription> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: upserted, error } = await supabase
     .from("subscriptions")
@@ -38,7 +38,7 @@ export async function upsertSubscription(
 export async function getAgentListingSlots(
   agentId: string
 ): Promise<ListingSlot[]> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("listing_slots")
@@ -56,7 +56,7 @@ export async function createListingSlot(
   agentId: string,
   conektaOrderId: string
 ): Promise<ListingSlot> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const expiresAt = new Date();
   expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -78,7 +78,7 @@ export async function createListingSlot(
 }
 
 export async function expireListingSlot(slotId: string): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase
     .from("listing_slots")
@@ -92,7 +92,7 @@ export async function assignSlotToListing(
   slotId: string,
   listingId: string
 ): Promise<ListingSlot> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   // Single UPDATE with conditional WHERE — avoids a separate SELECT round-trip.
   // The .is("listing_id", null) ensures we only update unassigned slots.

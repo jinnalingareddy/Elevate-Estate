@@ -3,10 +3,10 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { PropertyCard } from "@/components/property/PropertyCard";
-import type { Listing } from "@/lib/supabase/types";
+import type { ListingCard } from "@/lib/supabase/types";
 
 interface FeaturedSectionProps {
-  listings: Listing[];
+  listings: ListingCard[];
 }
 
 const container = {

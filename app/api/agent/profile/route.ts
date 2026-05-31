@@ -19,7 +19,7 @@ const schema = z
 
 export async function PATCH(req: NextRequest) {
   // 1. Auth check
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: authError,

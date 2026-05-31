@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // 1. Verify session
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: userError,
@@ -37,7 +38,7 @@ export async function POST(
     return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // 4. Fetch current value for audit log
   const { data: listing, error: fetchError } = await db
@@ -64,6 +65,9 @@ export async function POST(
   if (!updated || updated.length === 0) {
     return NextResponse.json({ error: "Update afectó 0 filas — verifica SUPABASE_SERVICE_ROLE_KEY" }, { status: 500 });
   }
+
+  revalidateTag("listings");
+  revalidateTag("default");
 
   // 6. Log to admin_audit_logs
   await db.from("admin_audit_logs").insert({

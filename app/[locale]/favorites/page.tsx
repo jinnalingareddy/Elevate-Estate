@@ -22,7 +22,7 @@ export default async function FavoritesPage() {
   let isAuthenticated = false;
 
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

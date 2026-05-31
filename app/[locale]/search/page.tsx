@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { SearchShell } from "@/components/search/SearchShell";
 import { getListings, getMapPins } from "@/lib/supabase/queries/listings";
-import type { ListingFilters, ListingType, PropertyType, Listing, MapPin } from "@/lib/supabase/types";
+import type { ListingFilters, ListingType, PropertyType, ListingCard, MapPin } from "@/lib/supabase/types";
 
 export const revalidate = 60;
 
@@ -20,6 +20,7 @@ type SearchParams = {
   city?: string;
   neighborhood?: string;
   state?: string;
+  zip?: string;
   type?: string;
   minPrice?: string;
   maxPrice?: string;
@@ -39,6 +40,7 @@ function parseFilters(sp: SearchParams): ListingFilters {
     city: sp.city || undefined,
     neighborhood: sp.neighborhood || undefined,
     state: sp.state || undefined,
+    postal_code: sp.zip || undefined,
     property_type: sp.type
       ? (sp.type.split(",").filter(Boolean) as PropertyType[])
       : undefined,
@@ -57,14 +59,15 @@ function parseFilters(sp: SearchParams): ListingFilters {
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }): Promise<Metadata> {
+  const sp = await searchParams;
   const parts: string[] = [];
-  if (searchParams.type) {
-    const label = PROPERTY_TYPE_LABELS[searchParams.type as PropertyType];
+  if (sp.type) {
+    const label = PROPERTY_TYPE_LABELS[sp.type as PropertyType];
     if (label) parts.push(label);
   }
-  if (searchParams.city) parts.push(`en ${searchParams.city}`);
+  if (sp.city) parts.push(`en ${sp.city}`);
 
   const title =
     parts.length > 0
@@ -73,7 +76,7 @@ export async function generateMetadata({
 
   return {
     title,
-    description: `Encuentra propiedades exclusivas${searchParams.city ? ` en ${searchParams.city}` : ""} en EstateElevate.`,
+    description: `Encuentra propiedades exclusivas${sp.city ? ` en ${sp.city}` : ""} en EstateElevate.`,
   };
 }
 
@@ -82,11 +85,12 @@ export async function generateMetadata({
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
-  const filters = parseFilters(searchParams);
+  const sp = await searchParams;
+  const filters = parseFilters(sp);
 
-  let listings: Listing[] = [];
+  let listings: ListingCard[] = [];
   let total = 0;
   let totalPages = 0;
   let mapPins: MapPin[] = [];
@@ -111,6 +115,7 @@ export default async function SearchPage({
       <div className="shrink-0 h-16" aria-hidden />
 
       <SearchShell
+        key={new URLSearchParams(sp as Record<string, string>).toString()}
         listings={listings}
         total={total}
         totalPages={totalPages}

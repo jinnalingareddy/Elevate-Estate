@@ -2,7 +2,6 @@
 
 import { forwardRef } from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,7 @@ import { cn } from "@/lib/utils";
 const buttonVariants = cva(
   [
     "inline-flex items-center justify-center font-medium rounded-lg",
-    "transition-colors focus-visible:outline-none focus-visible:ring-2",
+    "transition-all focus-visible:outline-none focus-visible:ring-2",
     "focus-visible:ring-gold-500 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
   ].join(" "),
@@ -89,22 +88,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
-      <motion.button
+      <button
         ref={ref}
         type={type}
-        className={classes}
+        className={cn(classes, !isDisabled && "hover:-translate-y-0.5 active:scale-[0.97]")}
         disabled={isDisabled}
         onClick={onClick}
-        whileHover={!isDisabled ? { y: -2 } : undefined}
-        whileTap={!isDisabled ? { scale: 0.97 } : undefined}
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
         {...(rest as object)}
       >
         {loading && (
           <Loader2 className="mr-2 h-4 w-4 animate-spin shrink-0" aria-hidden />
         )}
         {children}
-      </motion.button>
+      </button>
     );
   }
 );

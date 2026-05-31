@@ -1,7 +1,6 @@
 "use client";
 
 import * as RadixAccordion from "@radix-ui/react-accordion";
-import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,14 +66,7 @@ function AccordionItemComponent({
         >
           <span>{item.question}</span>
 
-          {/* Chevron rotates on open via Radix data attribute + Framer */}
-          <motion.span
-            className="shrink-0 text-slate-400 dark:text-slate-500 group-data-[state=open]:text-gold-500"
-            variants={{ open: { rotate: 180 }, closed: { rotate: 0 } }}
-            // The state is controlled by Radix via CSS, so we animate via CSS here
-            // for correctness with collapsible behaviour
-            style={{ display: "inline-flex" }}
-          >
+          <span className="inline-flex shrink-0 text-slate-400 dark:text-slate-500 group-data-[state=open]:text-gold-500">
             <ChevronDown
               className={cn(
                 "h-4 w-4 transition-transform duration-200",
@@ -82,7 +74,7 @@ function AccordionItemComponent({
               )}
               aria-hidden
             />
-          </motion.span>
+          </span>
         </RadixAccordion.Trigger>
       </RadixAccordion.Header>
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { MessageCircle, TrendingUp } from "lucide-react";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { getAgentLeads, getLeadStats } from "@/lib/supabase/queries/leads";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { LeadsPageShell } from "@/components/agent/LeadsPageShell";
@@ -14,16 +14,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  if (!session) redirect("/agent/auth");
-
-  const agentId = session.user.id;
+  const agentId = user.id;
 
   const [leads, stats] = await Promise.all([
     getAgentLeads(agentId).catch(() => []),

@@ -146,12 +146,28 @@ export function FilterModal({ open, onOpenChange }: Props) {
     (p) => String(p.min || "") === priceMin && String(p.max ?? "") === priceMax
   );
 
+  const footer = (
+    <div className="flex items-center justify-between">
+      <button
+        type="button"
+        onClick={handleClear}
+        className="text-sm text-slate-500 dark:text-slate-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
+      >
+        Limpiar todo
+      </button>
+      <Button variant="primary" size="md" onClick={handleApply}>
+        Aplicar Filtros
+      </Button>
+    </div>
+  );
+
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
       title="Filtros"
       maxWidth="max-w-xl"
+      footer={footer}
     >
       <div className="space-y-6">
         {/* Modo: Comprar / Rentar */}
@@ -428,20 +444,6 @@ export function FilterModal({ open, onOpenChange }: Props) {
             })}
           </div>
         </section>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-        <button
-          type="button"
-          onClick={handleClear}
-          className="text-sm text-slate-500 dark:text-slate-400 hover:text-gold-600 dark:hover:text-gold-400 transition-colors"
-        >
-          Limpiar todo
-        </button>
-        <Button variant="primary" size="md" onClick={handleApply}>
-          Aplicar Filtros
-        </Button>
       </div>
     </Modal>
   );

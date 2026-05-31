@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { useI18nRouter } from "@/lib/navigation";
 import {
   Building2,
   Edit2,
@@ -83,64 +84,61 @@ function RowMenu({ listing, onEdit, onToggle, onDelete }: RowMenuProps) {
         <MoreHorizontal className="h-4 w-4" aria-hidden />
       </button>
 
-      <AnimatePresence>
+      <>
         {open && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setOpen(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -4 }}
-              transition={{ duration: 0.12 }}
-              style={{ top: menuPos.top, right: menuPos.right }}
-              className={cn(
-                "fixed z-20 w-44",
-                "bg-white dark:bg-slate-800 rounded-lg shadow-lg",
-                "border border-slate-200 dark:border-slate-700",
-                "py-1 overflow-hidden"
-              )}
-            >
-              <button
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                onClick={() => { setOpen(false); onEdit(); }}
-              >
-                <Edit2 className="h-4 w-4 text-slate-400" aria-hidden />
-                Editar
-              </button>
-              <a
-                href={`/propiedades/${listing.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                onClick={() => setOpen(false)}
-              >
-                <Eye className="h-4 w-4 text-slate-400" aria-hidden />
-                Ver publicación
-              </a>
-              {next && (
-                <button
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                  onClick={() => { setOpen(false); onToggle(); }}
-                >
-                  <Building2 className="h-4 w-4 text-slate-400" aria-hidden />
-                  {next === "active" ? "Activar" : "Pausar"}
-                </button>
-              )}
-              <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
-              <button
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                onClick={() => { setOpen(false); onDelete(); }}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-                Eliminar
-              </button>
-            </motion.div>
-          </>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setOpen(false)}
+          />
         )}
-      </AnimatePresence>
+        <div
+          aria-hidden={!open}
+          style={{ top: menuPos.top, right: menuPos.right }}
+          className={cn(
+            "fixed z-20 w-44",
+            "bg-white dark:bg-slate-800 rounded-lg shadow-lg",
+            "border border-slate-200 dark:border-slate-700",
+            "py-1 overflow-hidden",
+            "transition-all duration-150 origin-top-right",
+            open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          )}
+        >
+          <button
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            onClick={() => { setOpen(false); onEdit(); }}
+          >
+            <Edit2 className="h-4 w-4 text-slate-400" aria-hidden />
+            Editar
+          </button>
+          <a
+            href={`/propiedades/${listing.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+            onClick={() => setOpen(false)}
+          >
+            <Eye className="h-4 w-4 text-slate-400" aria-hidden />
+            Ver publicación
+          </a>
+          {next && (
+            <button
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+              onClick={() => { setOpen(false); onToggle(); }}
+            >
+              <Building2 className="h-4 w-4 text-slate-400" aria-hidden />
+              {next === "active" ? "Activar" : "Pausar"}
+            </button>
+          )}
+          <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+          <button
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={() => { setOpen(false); onDelete(); }}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+            Eliminar
+          </button>
+        </div>
+      </>
     </div>
   );
 }
@@ -152,7 +150,8 @@ export function ListingsPageShell({
   leadCounts,
   limitInfo,
 }: ListingsPageShellProps) {
-  const router = useRouter();
+  const router = useRouter();       // for router.refresh()
+  const i18nRouter = useI18nRouter(); // for locale-aware navigation
   const { addToast } = useToast();
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [deleteTarget, setDeleteTarget] = useState<Listing | null>(null);
@@ -204,6 +203,12 @@ export function ListingsPageShell({
     startTransition(() => router.refresh());
   }
 
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const l of listings) c[l.status] = (c[l.status] ?? 0) + 1;
+    return c;
+  }, [listings]);
+
   return (
     <>
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -235,7 +240,7 @@ export function ListingsPageShell({
       {/* ── Stats row ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {(["active", "draft", "pending", "sold"] as ListingStatus[]).map((status) => {
-          const count = listings.filter((l) => l.status === status).length;
+          const count = statusCounts[status] ?? 0;
           const { variant, label } = STATUS_STYLES[status];
           return (
             <div
@@ -301,11 +306,13 @@ export function ListingsPageShell({
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {cover ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={cover.thumbnail_url}
                               alt={listing.title}
+                              width={56}
+                              height={40}
                               className="h-10 w-14 rounded-lg object-cover shrink-0"
+                              loading="lazy"
                             />
                           ) : (
                             <div className="h-10 w-14 rounded-lg bg-slate-100 dark:bg-slate-700 shrink-0" />
@@ -351,7 +358,7 @@ export function ListingsPageShell({
                       <td className="px-4 py-3 text-right">
                         <RowMenu
                           listing={listing}
-                          onEdit={() => router.push(`/agent/listings/${listing.id}/edit`)}
+                          onEdit={() => i18nRouter.push(`/agent/listings/${listing.id}/edit`)}
                           onToggle={() => handleToggleStatus(listing)}
                           onDelete={() => setDeleteTarget(listing)}
                         />

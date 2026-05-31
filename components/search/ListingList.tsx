@@ -8,12 +8,12 @@ import { PropertyCard } from "@/components/property/PropertyCard";
 import { PropertyCardSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import type { Listing } from "@/lib/supabase/types";
+import type { ListingCard } from "@/lib/supabase/types";
 
 // ─── ListingList ──────────────────────────────────────────────────────────────
 
 export interface ListingListProps {
-  listings: Listing[];
+  listings: ListingCard[];
   total: number;
   totalPages: number;
   loading?: boolean;

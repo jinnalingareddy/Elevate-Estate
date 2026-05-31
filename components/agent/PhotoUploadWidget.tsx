@@ -49,7 +49,9 @@ export function PhotoUploadWidget({
         resourceType: "image",
         folder: "listings",
         clientAllowedFormats: ["jpg", "jpeg", "png", "webp"],
-        maxFileSize: 10_000_000,
+        maxFileSize: 52_428_800, // 50 MB — accommodates raw DSLR JPEGs
+        maxImageWidth: 4000,
+        maxImageHeight: 3000,
       }}
       onSuccess={(result) => {
         const info = result.info as { public_id?: string } | null;
@@ -59,20 +61,27 @@ export function PhotoUploadWidget({
       }}
     >
       {({ open }) => (
-        <button
-          type="button"
-          onClick={() => open()}
-          disabled={disabled || remainingSlots <= 0}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 border-dashed transition-colors",
-            disabled || remainingSlots <= 0
-              ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed"
-              : "border-gold-300 dark:border-gold-600 text-gold-700 dark:text-gold-400 hover:bg-gold-50 dark:hover:bg-gold-900/20 cursor-pointer"
+        <div className="flex flex-col items-start gap-1">
+          <button
+            type="button"
+            onClick={() => open()}
+            disabled={disabled || remainingSlots <= 0}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 border-dashed transition-colors",
+              disabled || remainingSlots <= 0
+                ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed"
+                : "border-gold-300 dark:border-gold-600 text-gold-700 dark:text-gold-400 hover:bg-gold-50 dark:hover:bg-gold-900/20 cursor-pointer"
+            )}
+          >
+            <Camera className="h-4 w-4 shrink-0" aria-hidden />
+            {remainingSlots <= 0 ? "Límite de fotos alcanzado" : "Subir Fotos"}
+          </button>
+          {remainingSlots > 0 && (
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              Las fotos se optimizan automáticamente antes de subirse
+            </p>
           )}
-        >
-          <Camera className="h-4 w-4 shrink-0" aria-hidden />
-          {remainingSlots <= 0 ? "Límite de fotos alcanzado" : "Subir Fotos"}
-        </button>
+        </div>
       )}
     </CldUploadWidget>
   );

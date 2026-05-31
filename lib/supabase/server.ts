@@ -1,11 +1,12 @@
 import { cache } from "react";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import type { User } from "@supabase/supabase-js";
 
 // Memoized per-request — all callers within the same render share one instance.
-export const getSupabaseServerClient = cache(() => {
-  const cookieStore = cookies();
+export const getSupabaseServerClient = cache(async () => {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,6 +28,27 @@ export const getSupabaseServerClient = cache(() => {
       },
     }
   );
+});
+
+// Cached per-request — calls getUser() at most once per render pass regardless
+// of how many server components ask for the user. Eliminates the getSession()
+// warning and avoids redundant network round-trips to the Supabase Auth server.
+//
+// Fast path: middleware injects x-user-id after verifying the session, so for
+// all /agent/* and /admin/* routes no second network call is needed.
+export const getAuthUser = cache(async (): Promise<User | null> => {
+  const headerStore = await headers();
+  const userId = headerStore.get("x-user-id");
+  if (userId) {
+    // Already verified by middleware — return a minimal User object.
+    return { id: userId } as User;
+  }
+  // Fallback for public routes that optionally check auth (no middleware header).
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
 });
 
 // Stateless anon client — no cookies. Use inside unstable_cache callbacks and

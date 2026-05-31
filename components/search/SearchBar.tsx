@@ -50,8 +50,8 @@ export function SearchBar({ hideTabs = false, tagsOnly = false }: { hideTabs?: b
     { id: "rent" as const, label: th("searchRent") },
   ];
 
-  const [mode, setMode] = useState<"buy" | "rent">(
-    searchParams.get("mode") === "rent" ? "rent" : "buy"
+  const [mode, setMode] = useState<"" | "buy" | "rent">(
+    searchParams.get("mode") === "rent" ? "rent" : searchParams.get("mode") === "buy" ? "buy" : ""
   );
 
   // Initialize display value from URL — show "neighborhood, city" if both present
@@ -114,8 +114,12 @@ export function SearchBar({ hideTabs = false, tagsOnly = false }: { hideTabs?: b
 
   function buildParams(s: LocationSuggestion) {
     const params = new URLSearchParams();
-    params.set("mode", mode);
-    if (s.type === "colonia" && s.colonia) {
+    if (mode) params.set("mode", mode);
+    if (s.cp) {
+      // Zip code search: use postal_code for precise DB lookup, city for display
+      params.set("zip", s.cp);
+      params.set("city", s.municipio);
+    } else if (s.type === "colonia" && s.colonia) {
       params.set("neighborhood", s.colonia);
     } else if (s.type === "estado") {
       params.set("state", s.estado);
@@ -157,7 +161,7 @@ export function SearchBar({ hideTabs = false, tagsOnly = false }: { hideTabs?: b
       return;
     }
     const params = new URLSearchParams();
-    params.set("mode", mode);
+    if (mode) params.set("mode", mode);
     if (inputValue.trim()) params.set("city", inputValue.trim());
     if (type) params.set("type", type);
     router.push(`${searchBase}?${params.toString()}`);

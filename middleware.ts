@@ -15,7 +15,7 @@ import {
 // protected pages skip the profile query on every request.
 
 const ROLE_COOKIE = "__ee_r";
-const ROLE_TTL_SEC = 300; // 5 minutes
+const ROLE_TTL_SEC = 1800; // 30 minutes — role changes are rare; saves a DB round-trip per 5-min expiry
 
 // Module-level cache for the HMAC CryptoKey to avoid re-importing on every request.
 let _roleKey: CryptoKey | null = null;
@@ -187,11 +187,7 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // getUser() validates the JWT with the Supabase auth server — required to
-  // avoid the "getSession insecure" warning and to ensure the session is genuine.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const prefix = getLocalePrefix(pathname);
 
@@ -226,8 +222,27 @@ export async function middleware(request: NextRequest) {
     return withSecurityHeaders(NextResponse.redirect(homeUrl));
   }
 
-  // Auth passed — return the i18n response (already carries refreshed cookies)
-  return response;
+  // Auth passed — inject the verified user ID as a request header so server
+  // components can read it without a second round-trip to the Supabase auth server.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete("x-user-id"); // strip any client-supplied value
+  requestHeaders.set("x-user-id", user.id);
+  const responseWithUserId = NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Copy all cookies (session refresh + role cookie) from the i18n response onto
+  // the new response so nothing is lost.
+  response.cookies.getAll().forEach(({ name, value, ...rest }) => {
+    responseWithUserId.cookies.set(name, value, rest as Parameters<typeof responseWithUserId.cookies.set>[2]);
+  });
+
+  // Copy security headers from the i18n response.
+  response.headers.forEach((value, key) => {
+    if (key.startsWith("x-") || key === "content-security-policy" || key === "referrer-policy" || key === "permissions-policy") {
+      responseWithUserId.headers.set(key, value);
+    }
+  });
+
+  return withSecurityHeaders(responseWithUserId);
 }
 
 // ─── Matcher ──────────────────────────────────────────────────────────────────

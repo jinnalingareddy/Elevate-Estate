@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser, getSupabaseServiceClient } from "@/lib/supabase/server";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
 import { SupportPageShell } from "@/components/agent/SupportPageShell";
 
@@ -11,23 +11,19 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SupportPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  if (!session) redirect("/agent/auth");
+  const supabase = getSupabaseServiceClient();
 
-  // Get agent email for pre-filling the ticket form
+  // Only fetch the email column — this is all the support form needs.
   const { data: profile } = await supabase
     .from("profiles")
     .select("email")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single();
 
-  const email = profile?.email ?? session.user.email ?? "";
+  const email = profile?.email ?? user.email ?? "";
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">

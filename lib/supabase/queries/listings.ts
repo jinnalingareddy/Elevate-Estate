@@ -1,9 +1,10 @@
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
+import { unstable_cache, revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseAnonClient } from "../server";
 import { deleteCloudinaryImage } from "@/lib/cloudinary-server";
 import type {
   Listing,
+  ListingCard,
   ListingFilters,
   MapPin,
   CreateListingInput,
@@ -23,7 +24,7 @@ function slugify(text: string): string {
 }
 
 export async function getListings(filters: ListingFilters = {}): Promise<{
-  data: Listing[];
+  data: ListingCard[];
   total: number;
   page: number;
   totalPages: number;
@@ -33,6 +34,7 @@ export async function getListings(filters: ListingFilters = {}): Promise<{
     city,
     neighborhood,
     state,
+    postal_code,
     property_type,
     listing_type,
     min_price,
@@ -49,12 +51,19 @@ export async function getListings(filters: ListingFilters = {}): Promise<{
 
   let query = supabase
     .from("listings")
-    .select("*, profiles(id, full_name, avatar_url, phone, whatsapp)", { count: "estimated" })
+    .select(
+      "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, agent_id, profiles(id, full_name, avatar_url)",
+      { count: "estimated" }
+    )
     .eq("status", "active")
     .range(from, to);
 
-  if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
-  if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+  if (postal_code) {
+    query = query.eq("postal_code", postal_code);
+  } else {
+    if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
+    if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+  }
   if (state) query = query.ilike("state", `%${state}%`);
   if (property_type?.length) query = query.in("property_type", property_type);
   if (listing_type === "for_sale") {
@@ -85,7 +94,7 @@ export async function getListings(filters: ListingFilters = {}): Promise<{
 
   const total = count ?? 0;
   return {
-    data: (data as Listing[]) ?? [],
+    data: (data as unknown as ListingCard[]) ?? [],
     total,
     page,
     totalPages: Math.ceil(total / limit),
@@ -100,6 +109,7 @@ export const getMapPins = cache(
         city,
         neighborhood,
         state,
+        postal_code,
         property_type,
         listing_type,
         min_price,
@@ -116,8 +126,12 @@ export const getMapPins = cache(
         .not("lng", "is", null)
         .limit(500);
 
-      if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
-      if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+      if (postal_code) {
+        query = query.eq("postal_code", postal_code);
+      } else {
+        if (city) query = query.or(`city.ilike.%${city}%,alcaldia_municipio.ilike.%${city}%`);
+        if (neighborhood) query = query.ilike("neighborhood", `%${neighborhood}%`);
+      }
       if (state) query = query.ilike("state", `%${state}%`);
       if (property_type?.length) query = query.in("property_type", property_type);
       if (listing_type === "for_sale") {
@@ -146,7 +160,7 @@ export const getListingBySlug = cache(
 
       const { data, error } = await supabase
         .from("listings")
-        .select("*, profiles(id, full_name, agency_name, avatar_url, phone, whatsapp)")
+        .select("*, profiles(id, full_name, avatar_url, phone, whatsapp, agency_name, bio)")
         .eq("slug", slug)
         .single();
 
@@ -162,34 +176,48 @@ export const getListingBySlug = cache(
   )
 );
 
-export async function getAgentListings(agentId: string): Promise<Listing[]> {
-  const supabase = getSupabaseServerClient();
+// Narrowed columns — agent management pages don't need description, full
+// address fields, or the agent's own profile joined back on every row.
+// Uses the anon client (no cookies) so it can run inside unstable_cache.
+export const getAgentListings = unstable_cache(
+  async (agentId: string, page = 1, limit = 50): Promise<{ data: Listing[]; total: number }> => {
+    const supabase = getSupabaseAnonClient();
+    const from = (page - 1) * limit;
 
-  const { data, error } = await supabase
-    .from("listings")
-    .select("*, profiles(id, full_name, avatar_url, phone, whatsapp)")
-    .eq("agent_id", agentId)
-    .order("created_at", { ascending: false });
+    const { data, count, error } = await supabase
+      .from("listings")
+      .select(
+        "id, agent_id, title, slug, status, price, currency, property_type, listing_type, city, neighborhood, bedrooms, bathrooms, total_area, images, views, featured, created_at, updated_at",
+        { count: "exact" }
+      )
+      .eq("agent_id", agentId)
+      .order("created_at", { ascending: false })
+      .range(from, from + limit - 1);
 
-  if (error) throw new Error(error.message);
-  return (data as Listing[]) ?? [];
-}
+    if (error) throw new Error(error.message);
+    return { data: (data as Listing[]) ?? [], total: count ?? 0 };
+  },
+  ["agent-listings"],
+  { revalidate: 30, tags: ["listings"] }
+);
 
 export const getFeaturedListings = cache(
   unstable_cache(
-    async (limit = 6): Promise<Listing[]> => {
+    async (limit = 6): Promise<ListingCard[]> => {
       const supabase = getSupabaseAnonClient();
 
       const { data, error } = await supabase
         .from("listings")
-        .select("*, profiles(id, full_name, avatar_url, phone, whatsapp)")
+        .select(
+          "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, agent_id, profiles(id, full_name, avatar_url)"
+        )
         .eq("status", "active")
         .eq("featured", true)
         .order("created_at", { ascending: false })
         .limit(limit);
 
       if (error) throw new Error(error.message);
-      return (data as Listing[]) ?? [];
+      return (data as unknown as ListingCard[]) ?? [];
     },
     ["featured-listings"],
     { revalidate: 300, tags: ["listings"] }
@@ -198,12 +226,14 @@ export const getFeaturedListings = cache(
 
 export const getSimilarListings = cache(
   unstable_cache(
-    async (listingId: string, city: string, propertyType: string, limit = 4): Promise<Listing[]> => {
+    async (listingId: string, city: string, propertyType: string, limit = 4): Promise<ListingCard[]> => {
       const supabase = getSupabaseAnonClient();
 
       const { data, error } = await supabase
         .from("listings")
-        .select("*, profiles(id, full_name, avatar_url, phone, whatsapp)")
+        .select(
+          "id, slug, title, price, currency, city, neighborhood, bedrooms, bathrooms, total_area, status, listing_type, property_type, featured, images, created_at, agent_id, profiles(id, full_name, avatar_url)"
+        )
         .eq("status", "active")
         .neq("id", listingId)
         .or(`city.eq.${city},property_type.eq.${propertyType}`)
@@ -211,7 +241,7 @@ export const getSimilarListings = cache(
         .limit(limit);
 
       if (error) throw new Error(error.message);
-      return (data as Listing[]) ?? [];
+      return (data as unknown as ListingCard[]) ?? [];
     },
     ["similar-listings"],
     { revalidate: 600, tags: ["listings"] }
@@ -219,7 +249,7 @@ export const getSimilarListings = cache(
 );
 
 export async function createListing(data: CreateListingInput): Promise<Listing> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const baseSlug = slugify(data.title);
   const slug = `${baseSlug}-${nanoid(6)}`;
@@ -231,6 +261,7 @@ export async function createListing(data: CreateListingInput): Promise<Listing> 
     .single();
 
   if (error) throw new Error(error.message);
+  revalidateTag("listings", "default");
   return created as Listing;
 }
 
@@ -238,7 +269,7 @@ export async function updateListing(
   id: string,
   data: UpdateListingInput
 ): Promise<Listing> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: updated, error } = await supabase
     .from("listings")
@@ -248,11 +279,12 @@ export async function updateListing(
     .single();
 
   if (error) throw new Error(error.message);
+  revalidateTag("listings", "default");
   return updated as Listing;
 }
 
 export async function deleteListing(id: string): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: listing, error: fetchError } = await supabase
     .from("listings")
@@ -272,13 +304,14 @@ export async function deleteListing(id: string): Promise<void> {
 
   const { error } = await supabase.from("listings").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  revalidateTag("listings", "default");
 }
 
 export async function incrementViews(
   listingId: string,
   ipHash: string
 ): Promise<void> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 

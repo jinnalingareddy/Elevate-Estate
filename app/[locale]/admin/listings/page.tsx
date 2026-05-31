@@ -9,20 +9,41 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
+
 export default async function AdminListingsPage({
   searchParams,
 }: {
-  searchParams: { agent?: string };
+  searchParams: {
+    agent?: string;
+    status?: string;
+    city?: string;
+    search?: string;
+    page?: string;
+  };
 }) {
   const db = getSupabaseServiceClient();
+  const page = Math.max(0, parseInt(searchParams.page ?? "0") || 0);
 
-  const { data: listings } = await db
+  let query = db
     .from("listings")
     .select(
       `id, title, city, price, currency, status, featured, views, created_at, images, agent_id,
-       profiles!agent_id(full_name, email)`
+       profiles!agent_id(full_name, email)`,
+      { count: "exact" }
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+  if (searchParams.agent) query = query.eq("agent_id", searchParams.agent);
+  if (searchParams.status && searchParams.status !== "all")
+    query = query.eq("status", searchParams.status);
+  if (searchParams.city?.trim())
+    query = query.ilike("city", `%${searchParams.city.trim()}%`);
+  if (searchParams.search?.trim())
+    query = query.ilike("title", `%${searchParams.search.trim()}%`);
+
+  const { data: listings, count } = await query;
 
   const rows: ListingRow[] = (listings ?? []).map((l) => {
     const raw = l.profiles as unknown;
@@ -45,6 +66,8 @@ export default async function AdminListingsPage({
     };
   });
 
+  const total = count ?? 0;
+
   return (
     <div className="px-4 sm:px-8 py-8">
       <div className="mb-6">
@@ -52,10 +75,18 @@ export default async function AdminListingsPage({
           Propiedades
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {rows.length} propiedades en total
+          {total.toLocaleString("es-MX")} propiedades en total
         </p>
       </div>
-      <ListingsClient listings={rows} agentFilter={searchParams.agent} />
+      <ListingsClient
+        listings={rows}
+        total={total}
+        page={page}
+        pageSize={PAGE_SIZE}
+        initialSearch={searchParams.search ?? ""}
+        initialStatus={(searchParams.status as "all" | "active" | "draft" | "pending" | "sold") ?? "all"}
+        initialCity={searchParams.city ?? ""}
+      />
     </div>
   );
 }

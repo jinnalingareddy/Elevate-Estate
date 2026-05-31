@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import * as RadixToast from "@radix-ui/react-toast";
-import { AnimatePresence, motion } from "framer-motion";
 import { X, CheckCircle2, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,7 +97,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <RadixToast.Provider swipeDirection="right">
         {children}
 
-        <AnimatePresence mode="popLayout">
           {toasts.map((toast) => {
             const Icon = variantIcons[toast.variant];
             return (
@@ -108,55 +106,45 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 onOpenChange={(open) => {
                   if (!open) dispatch({ type: "REMOVE", id: toast.id });
                 }}
-                asChild
-                forceMount
+                className={cn(
+                  "pointer-events-auto flex items-start gap-3",
+                  "w-[360px] max-w-[calc(100vw-2rem)] rounded-lg p-4",
+                  "bg-white shadow-lg dark:bg-slate-800",
+                  "border border-slate-200 dark:border-slate-700",
+                  "data-[state=open]:animate-toast-in data-[state=closed]:animate-toast-out",
+                  variantStyles[toast.variant]
+                )}
               >
-                <motion.li
-                  layout
-                  initial={{ opacity: 0, x: 80, scale: 0.9 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: 80, scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                  className={cn(
-                    "pointer-events-auto flex items-start gap-3",
-                    "w-[360px] max-w-[calc(100vw-2rem)] rounded-lg p-4",
-                    "bg-white shadow-lg dark:bg-slate-800",
-                    "border border-slate-200 dark:border-slate-700",
-                    variantStyles[toast.variant]
+                <Icon
+                  className={cn("h-5 w-5 shrink-0 mt-0.5", iconColors[toast.variant])}
+                  aria-hidden
+                />
+
+                <div className="flex-1 min-w-0">
+                  <RadixToast.Title className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {toast.title}
+                  </RadixToast.Title>
+                  {toast.description && (
+                    <RadixToast.Description className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {toast.description}
+                    </RadixToast.Description>
                   )}
+                </div>
+
+                <RadixToast.Close
+                  className={cn(
+                    "shrink-0 rounded p-0.5 text-slate-400",
+                    "hover:text-slate-600 hover:bg-slate-100",
+                    "dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700",
+                    "transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  )}
+                  aria-label="Cerrar"
                 >
-                  <Icon
-                    className={cn("h-5 w-5 shrink-0 mt-0.5", iconColors[toast.variant])}
-                    aria-hidden
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <RadixToast.Title className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {toast.title}
-                    </RadixToast.Title>
-                    {toast.description && (
-                      <RadixToast.Description className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                        {toast.description}
-                      </RadixToast.Description>
-                    )}
-                  </div>
-
-                  <RadixToast.Close
-                    className={cn(
-                      "shrink-0 rounded p-0.5 text-slate-400",
-                      "hover:text-slate-600 hover:bg-slate-100",
-                      "dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700",
-                      "transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500"
-                    )}
-                    aria-label="Cerrar"
-                  >
-                    <X className="h-4 w-4" />
-                  </RadixToast.Close>
-                </motion.li>
+                  <X className="h-4 w-4" />
+                </RadixToast.Close>
               </RadixToast.Root>
             );
           })}
-        </AnimatePresence>
 
         <RadixToast.Viewport
           className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 outline-none"

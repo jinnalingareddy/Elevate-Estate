@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/server";
 import { getAgentListings } from "@/lib/supabase/queries/listings";
 import { getLeadCountsByListing } from "@/lib/supabase/queries/leads";
 import { getListingLimitInfo } from "@/lib/listing-limits";
@@ -13,32 +14,42 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function ListingsPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+const LIMIT = 50;
 
-  if (!session) redirect("/agent/auth");
+export default async function ListingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ page?: string }>;
+}) {
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  const agentId = session.user.id;
+  const agentId = user.id;
+  const params = await searchParams;
+  const raw = Number(params?.page);
+  const page = Math.max(1, Number.isFinite(raw) ? raw : 1);
 
-  const [listings, limitInfo] = await Promise.all([
-    getAgentListings(agentId).catch(() => []),
-    getListingLimitInfo(agentId).catch(() => ({
-      plan: "free" as const,
-      planLimit: 1,
-      activeListings: 0,
-      paidSlots: 0,
-      available: 1,
-    })),
-  ]);
+  // Start limitInfo immediately (independent). Await listings only to get IDs for
+  // lead counts — all three fetches overlap as much as possible.
+  const limitInfoPromise = getListingLimitInfo(agentId).catch(() => ({
+    plan: "free" as const,
+    planLimit: 1,
+    activeListings: 0,
+    paidSlots: 0,
+    available: 1,
+  }));
 
-  // Use a COUNT+GROUP BY RPC instead of fetching all lead rows.
+  const { data: listings, total } = await getAgentListings(agentId, page, LIMIT).catch(
+    () => ({ data: [], total: 0 })
+  );
+
   const listingIds = listings.map((l) => l.id);
-  const leadCounts = await getLeadCountsByListing(listingIds).catch(() => ({}));
+  const totalPages = Math.ceil(total / LIMIT);
+
+  const [limitInfo, leadCounts] = await Promise.all([
+    limitInfoPromise,
+    getLeadCountsByListing(listingIds).catch(() => ({})),
+  ]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -50,6 +61,40 @@ export default async function ListingsPage() {
             leadCounts={leadCounts}
             limitInfo={limitInfo}
           />
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-4">
+              {page > 1 ? (
+                <Link
+                  href={`?page=${page - 1}`}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  ← Anterior
+                </Link>
+              ) : (
+                <span aria-disabled="true" className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 dark:border-slate-800 dark:text-slate-600 cursor-not-allowed">
+                  ← Anterior
+                </span>
+              )}
+
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Página {page} de {totalPages}
+              </span>
+
+              {page < totalPages ? (
+                <Link
+                  href={`?page=${page + 1}`}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Siguiente →
+                </Link>
+              ) : (
+                <span aria-disabled="true" className="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 dark:border-slate-800 dark:text-slate-600 cursor-not-allowed">
+                  Siguiente →
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>

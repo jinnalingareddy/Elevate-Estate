@@ -37,7 +37,7 @@ export function generateSlug(
  * until it finds an available slug.
  */
 export async function ensureUniqueSlug(baseSlug: string): Promise<string> {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
   const { data: existing } = await supabase
     .from("listings")

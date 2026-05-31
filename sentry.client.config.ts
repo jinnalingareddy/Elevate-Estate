@@ -6,5 +6,9 @@ Sentry.init({
   debug: false,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.05,
-  integrations: [Sentry.replayIntegration()],
+  integrations: [
+    Sentry.replayIntegration(),
+    // Disable DOM event-listener wrapping (sentryWrapped) which breaks React hydration
+    Sentry.breadcrumbsIntegration({ dom: false }),
+  ],
 });

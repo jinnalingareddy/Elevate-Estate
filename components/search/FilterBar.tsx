@@ -308,7 +308,7 @@ export function FilterBar() {
   // URL params
   const cityParam = searchParams.get("city") ?? "";
   const neighborhoodParam = searchParams.get("neighborhood") ?? "";
-  const mode = searchParams.get("mode") ?? "buy";
+  const mode = searchParams.get("mode") ?? "";
   const priceMin = searchParams.get("priceMin") ?? "";
   const priceMax = searchParams.get("priceMax") ?? "";
   const type = searchParams.get("type") ?? "";
@@ -373,7 +373,7 @@ export function FilterBar() {
   function clearAll() {
     const params = new URLSearchParams(searchParams.toString());
     ["priceMin", "priceMax", "type", "beds", "baths", "areaMin", "areaMax",
-      "parking", "yearFrom", "yearTo", "amenities", "city", "neighborhood", "state"].forEach((k) => params.delete(k));
+      "parking", "yearFrom", "yearTo", "amenities", "city", "neighborhood", "state", "zip"].forEach((k) => params.delete(k));
     params.delete("page");
     router.push(`${searchBase}?${params.toString()}`);
     setCustomMin("");
@@ -438,7 +438,7 @@ export function FilterBar() {
   }
 
   const activeCount = chips.length;
-  const modeLabel = mode === "rent" ? th("searchRent") : th("searchBuy");
+  const modeLabel = mode === "rent" ? th("searchRent") : mode === "buy" ? th("searchBuy") : "Buy / Rent";
 
   return (
     <>
@@ -513,8 +513,8 @@ export function FilterBar() {
             />
 
             {/* Buy / Rent mode */}
-            <FilterDropdown label={modeLabel} active={false}>
-              {(["buy", "rent"] as const).map((val) => (
+            <FilterDropdown label={modeLabel} active={mode === "buy" || mode === "rent"}>
+              {([["", "All"], ["buy", th("searchBuy")], ["rent", th("searchRent")]] as const).map(([val, label]) => (
                 <button
                   key={val}
                   type="button"
@@ -526,7 +526,7 @@ export function FilterBar() {
                       : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                   )}
                 >
-                  {val === "rent" ? th("searchRent") : th("searchBuy")}
+                  {label}
                 </button>
               ))}
             </FilterDropdown>

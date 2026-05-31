@@ -36,10 +36,19 @@ const ClientAuthContext = createContext<ClientAuthCtx>({
   signOut: async () => {},
 });
 
-export function ClientAuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+interface ClientAuthProviderProps {
+  children: React.ReactNode;
+  initialUser?: User | null;
+}
+
+export function ClientAuthProvider({ children, initialUser = null }: ClientAuthProviderProps) {
+  // Seed state from the server-resolved user (passed via x-user-id header mechanism).
+  // This avoids a redundant getUser() network call on mount for authenticated users.
+  const [user, setUser] = useState<User | null>(initialUser);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // If we already have a user from the server, skip the loading state; still need
+  // to fetch the profile, but we don't block renders with authLoading=true.
+  const [authLoading, setAuthLoading] = useState(!initialUser);
 
   const fetchProfile = useCallback(async (userId: string) => {
     const supabase = getSupabaseBrowserClient();
@@ -52,33 +61,33 @@ export function ClientAuthProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
+    // If we had an initialUser, kick off profile fetch immediately.
+    if (initialUser?.id) {
+      fetchProfile(initialUser.id).finally(() => setAuthLoading(false));
+    }
 
-    // getSession() reads the JWT from localStorage — no network round-trip.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        fetchProfile(u.id).finally(() => setAuthLoading(false));
-      } else {
-        setAuthLoading(false);
-      }
-    });
+    const supabase = getSupabaseBrowserClient();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        fetchProfile(u.id);
+      // Access session.user only on client — safe because storage is localStorage here.
+      // We call getUser() to get a validated user on auth state changes (login/logout).
+      if (session) {
+        supabase.auth.getUser().then(({ data: { user: u } }) => {
+          setUser(u ?? null);
+          if (u) fetchProfile(u.id);
+          else { setProfile(null); setAuthLoading(false); }
+        });
       } else {
+        setUser(null);
         setProfile(null);
         setAuthLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProfile]);
 
   const signOut = useCallback(async () => {

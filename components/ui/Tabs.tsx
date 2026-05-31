@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import * as RadixTabs from "@radix-ui/react-tabs";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge } from "./Badge";
 
@@ -71,37 +70,20 @@ function Tabs({
                 "transition-colors duration-150 select-none",
 
                 variant === "underline" && [
-                  "px-4 py-2.5",
+                  "px-4 pb-2 pt-2.5 border-b-2",
                   isActive
-                    ? "text-gold-600 dark:text-gold-400"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                    ? "text-gold-600 dark:text-gold-400 border-gold-500 dark:border-gold-400"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border-transparent",
                 ],
 
                 variant === "pill" && [
                   "px-3 py-1.5 rounded-md z-10",
                   isActive
-                    ? "text-white"
+                    ? "text-white bg-gold-500 dark:bg-gold-600"
                     : "text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
                 ]
               )}
             >
-              {/* Animated indicator */}
-              {isActive && variant === "underline" && (
-                <motion.span
-                  layoutId="tabs-underline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gold-500 dark:bg-gold-400"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-
-              {isActive && variant === "pill" && (
-                <motion.span
-                  layoutId="tabs-pill"
-                  className="absolute inset-0 rounded-md bg-gold-500 dark:bg-gold-600"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-
               <span className="relative z-10">{item.label}</span>
 
               {item.count !== undefined && (

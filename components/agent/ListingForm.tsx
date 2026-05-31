@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useI18nRouter } from "@/lib/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -276,13 +276,14 @@ export function ListingForm({
   agentId,
   agentPlan,
 }: ListingFormProps) {
-  const router = useRouter();
+  const router = useI18nRouter();
   const { addToast } = useToast();
   const [photos, setPhotos] = useState<ListingImage[]>(
     initialData?.images ?? []
   );
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   // CP lookup
   const [cpLoading, setCpLoading] = useState(false);
   const [cpColonias, setCpColonias] = useState<string[]>([]);
@@ -518,6 +519,7 @@ export function ListingForm({
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   async function onSubmit(data: FormValues) {
+    const setSubmitting = data.status === "active" ? setIsPublishing : setIsSaving;
     setSubmitting(true);
     try {
       const composedAddress = [data.calle_numero, data.numero_interior]
@@ -569,7 +571,8 @@ export function ListingForm({
         variant: "error",
       });
     } finally {
-      setSubmitting(false);
+      setIsSaving(false);
+      setIsPublishing(false);
     }
   }
 
@@ -1192,9 +1195,9 @@ export function ListingForm({
           type="button"
           variant="ghost"
           size="lg"
-          loading={submitting}
+          loading={isSaving}
           onClick={handleSaveDraft}
-          disabled={submitting}
+          disabled={isSaving || isPublishing}
         >
           Guardar Borrador
         </Button>
@@ -1202,9 +1205,9 @@ export function ListingForm({
           type="button"
           variant="primary"
           size="lg"
-          loading={submitting}
+          loading={isPublishing}
           onClick={handlePublish}
-          disabled={submitting}
+          disabled={isSaving || isPublishing}
         >
           Publicar Propiedad
         </Button>

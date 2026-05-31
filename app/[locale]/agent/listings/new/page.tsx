@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import Link from "next/link";
+import { redirect, Link } from "@/lib/navigation";
 import { ChevronLeft } from "lucide-react";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getListingLimitInfo, canCreateListing } from "@/lib/listing-limits";
-import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
+import { getAuthUser } from "@/lib/supabase/server";
+import { getListingLimitInfo } from "@/lib/listing-limits";
 import { AgentSidebar } from "@/components/layout/AgentSidebar";
-import { ListingForm } from "@/components/agent/ListingForm";
+import { ListingFormDynamic } from "@/components/agent/ListingFormDynamic";
 import { config } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -16,30 +14,20 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function NewListingPage() {
-  const supabase = getSupabaseServerClient();
-  // Middleware already validated the JWT — getSession() is safe here and avoids
-  // a second network round-trip to the Supabase Auth server.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const user = await getAuthUser();
+  if (!user) redirect("/agent/auth");
 
-  if (!session) redirect("/agent/auth");
+  const agentId = user.id;
 
-  const agentId = session.user.id;
-
-  const [canCreate, subscription] = await Promise.all([
-    canCreateListing(agentId).catch(() => false),
-    getAgentSubscription(agentId).catch(() => null),
-  ]);
-
-  const agentPlan = (subscription?.plan ?? "free") as "free" | "pro" | "elite";
+  const limitInfo = await getListingLimitInfo(agentId).catch(() => null);
+  const canCreate = (limitInfo?.available ?? 0) > 0;
+  const agentPlan = (limitInfo?.plan ?? "free") as "free" | "pro" | "elite";
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       <AgentSidebar />
       <main className="flex-1 lg:pl-64">
         <div className="px-4 sm:px-8 pb-8 pt-14 lg:pt-8 max-w-3xl">
-          {/* Back link */}
           <Link
             href="/agent/listings"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-6"
@@ -53,7 +41,7 @@ export default async function NewListingPage() {
           </h1>
 
           {canCreate ? (
-            <ListingForm mode="create" agentId={agentId} agentPlan={agentPlan} />
+            <ListingFormDynamic mode="create" agentId={agentId} agentPlan={agentPlan} />
           ) : (
             <div className="rounded-2xl border border-gold-200 dark:border-gold-800 bg-gold-50 dark:bg-gold-900/20 p-8 text-center">
               <p className="text-lg font-semibold text-gold-800 dark:text-gold-300 mb-2">
@@ -63,8 +51,8 @@ export default async function NewListingPage() {
                 Tu plan{" "}
                 <strong>{config.plans[agentPlan].name}</strong> permite hasta{" "}
                 <strong>{config.plans[agentPlan].listingLimit}</strong>{" "}
-                propiedad{config.plans[agentPlan].listingLimit !== 1 ? "es" : ""} activa. Actualiza tu plan
-                o compra una publicación individual para continuar.
+                propiedad{config.plans[agentPlan].listingLimit !== 1 ? "es" : ""} activa. Actualiza
+                tu plan o compra una publicación individual para continuar.
               </p>
               <div className="flex justify-center gap-3 flex-wrap">
                 <Link

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getSupabaseServerClient, getSupabaseServiceClient } from "@/lib/supabase/server";
 import type { ListingStatus } from "@/lib/supabase/types";
 
@@ -6,10 +7,10 @@ const VALID_STATUSES: ListingStatus[] = ["active", "draft", "pending", "sold"];
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // 1. Verify session
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const {
     data: { user },
     error: userError,
@@ -43,7 +44,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // 4. Fetch current status for audit log
   const { data: listing, error: fetchError } = await db
@@ -65,6 +66,9 @@ export async function PATCH(
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
+
+  revalidateTag("listings");
+  revalidateTag("default");
 
   // 6. Log to admin_audit_log
   await db.from("admin_audit_logs").insert({
