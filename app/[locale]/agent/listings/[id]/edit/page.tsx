@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { redirect, Link } from "@/lib/navigation";
+import { notFound, redirect } from "next/navigation";
+import { Link } from "@/lib/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getAuthUser, getSupabaseServerClient } from "@/lib/supabase/server";
 import { getAgentSubscription } from "@/lib/supabase/queries/subscriptions";
