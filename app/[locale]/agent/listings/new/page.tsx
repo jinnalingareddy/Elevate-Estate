@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { redirect, Link } from "@/lib/navigation";
+import { redirect } from "next/navigation";
+import { Link } from "@/lib/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getAuthUser } from "@/lib/supabase/server";
 import { getListingLimitInfo } from "@/lib/listing-limits";
