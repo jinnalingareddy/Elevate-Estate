@@ -67,7 +67,8 @@ export async function PATCH(
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  revalidateTag("listings", "default");
+  revalidateTag("listings");
+  revalidateTag("default");
 
   // 6. Log to admin_audit_log
   await db.from("admin_audit_logs").insert({

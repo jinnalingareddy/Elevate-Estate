@@ -66,7 +66,8 @@ export async function POST(
     return NextResponse.json({ error: "Update afectó 0 filas — verifica SUPABASE_SERVICE_ROLE_KEY" }, { status: 500 });
   }
 
-  revalidateTag("listings", "default");
+  revalidateTag("listings");
+  revalidateTag("default");
 
   // 6. Log to admin_audit_logs
   await db.from("admin_audit_logs").insert({

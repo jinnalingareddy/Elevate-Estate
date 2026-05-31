@@ -34,8 +34,6 @@ export default async function EditListingPage({
 
   if (listing.agent_id !== user.id) notFound();
 
-  if (listing.agent_id !== user.id) notFound();
-
   const agentPlan = (subscription?.plan ?? "free") as "free" | "pro" | "elite";
 
   return (
